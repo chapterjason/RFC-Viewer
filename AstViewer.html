@@ -16,21 +16,22 @@
       --warn: #f59e0b;
       --border: #1f2430;
 
-      /* Type colors (colorblind-friendly, muted yet distinct) */
-      --Paragraph: rgba(92, 126, 196, 0.20);
-      --BlankLine: rgba(130, 138, 147, 0.12);
-      --IndentedBlock: rgba(151, 108, 186, 0.22);
-      --Metadata: rgba(196, 151, 92, 0.22);
-      --Title: rgba(94, 166, 120, 0.22);
-      --SectionTitle: rgba(179, 104, 104, 0.22);
-      --PageBreak: rgba(114, 124, 202, 0.22);
-      --PageFooter: rgba(196, 132, 92, 0.22);
-      --PageHeader: rgba(92, 152, 184, 0.22);
-      --List: rgba(92, 178, 168, 0.22);
-      --DefinitionList: rgba(92, 168, 120, 0.22);
-      --TableOfContents: rgba(168, 120, 92, 0.22);
-      --Figure: rgba(200, 160, 255, 0.20);
-      --Document: rgba(255, 255, 255, 0.04);
+      /* Type colors (muted, distinct, cohesive) */
+      --Paragraph: rgba(88, 130, 193, 0.22);         /* muted blue */
+      --BlankLine: rgba(255, 255, 255, 0.03);        /* near background */
+      --IndentedBlock: rgba(149, 110, 186, 0.22);    /* muted purple */
+      --Metadata: rgba(210, 160, 96, 0.22);          /* muted orange */
+      --Title: rgba(84, 170, 120, 0.22);             /* muted green */
+      --SectionTitle: rgba(190, 110, 110, 0.22);     /* muted red */
+      /* PageBreak: near-background, distinct from BlankLine */
+      --PageBreak: rgba(114, 124, 202, 0.08);
+      --PageFooter: rgba(114, 124, 202, 0.08);
+      --PageHeader: rgba(114, 124, 202, 0.08);
+      --List: rgba(88, 176, 168, 0.22);              /* muted teal */
+      --DefinitionList: rgba(142, 180, 102, 0.22);   /* olive */
+      --TableOfContents: rgba(176, 146, 100, 0.22);  /* muted amber */
+      --Figure: rgba(206, 120, 160, 0.22);           /* muted rose */
+      --Document: rgba(255, 255, 255, 0.06);         /* very subtle */
 
       /* Sizing */
       --code-size: 14px;
@@ -39,7 +40,7 @@
     html, body { height: 100%; }
     body {
       margin: 0;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-family: Consolas, monospace;
       color: var(--text);
       background: var(--bg);
     }
@@ -69,6 +70,8 @@
       cursor: pointer;
       font-size: 12px;
     }
+    /* Ensure all UI controls render in monospace */
+    button, .btn, input, select, textarea, label { font-family: inherit; font-variant-ligatures: none; }
     button:hover { border-color: #2b3445; }
     .layout {
       display: grid;
@@ -107,7 +110,7 @@
 
     .render-wrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
     .legend { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #0f1320; }
-    .legend .item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+    .legend .item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; font-family: inherit; }
     .legend .swatch { width: 12px; height: 12px; border-radius: 3px; outline: 1px solid var(--border); }
     .legend .item input { margin: 0; }
 
@@ -116,18 +119,28 @@
     .output {
       position: relative; margin: 0; padding: 8px 12px; background: transparent;
       border: none; color: var(--text); white-space: pre; line-height: 1.6; font-size: var(--code-size);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-family: Consolas, monospace;
       font-variant-ligatures: none;
     }
-    .output .line { display: block; }
+    .output .line { display: block; padding: 0 6px; }
     .output .line::selection { background: rgba(122, 162, 247, 0.35); }
+    /* Muted styling for visible whitespace markers */
+    .output .line .ws { color: var(--muted); opacity: 0.7; }
+    .output .line .ws.ws-tab { letter-spacing: 0; }
     /* Ensure blank lines occupy vertical space without inserting spaces */
     .output .line:empty::before { content: "\200B"; }
     /* Visualize page breaks explicitly */
     .output .line.page-break { color: var(--muted); }
 
     /* Node block container to group multi-line nodes for unified outlines */
-    .output .block { display: block; position: relative; }
+    .output .block {
+      display: block;
+      position: relative;
+      /* Always show a subtle border around rendered items */
+      border: 1px solid var(--border);
+      border-radius: 0;
+      margin: 2px 0;
+    }
     /* Make labels non-selectable so they don't end up in clipboard */
     .output .block .type-badge { user-select: none; -webkit-user-select: none; -moz-user-select: none; pointer-events: none; }
     .output .block .summary { display: none; color: var(--muted); padding-left: 8px; }
@@ -139,34 +152,21 @@
     /* Small type label at top-right of each block */
     .output .block .type-badge {
       position: absolute;
-      top: 2px;
-      right: 6px;
+      top: 0;
+      right: 0;
       font-size: 10px;
       line-height: 1;
       color: var(--text);
-      background: rgba(255,255,255,0.06);
+      background: var(--border);
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: 0;
       padding: 2px 4px;
       pointer-events: none; /* do not block clicks on the block */
       opacity: 0.9;
     }
 
-    /* Tint labels by type */
-    .output .block[data-type="Paragraph"] .type-badge { background: var(--Paragraph); }
-    .output .block[data-type="BlankLine"] .type-badge { background: var(--BlankLine); }
-    .output .block[data-type="IndentedBlock"] .type-badge { background: var(--IndentedBlock); }
-    .output .block[data-type="Metadata"] .type-badge { background: var(--Metadata); }
-    .output .block[data-type="Title"] .type-badge { background: var(--Title); }
-    .output .block[data-type="SectionTitle"] .type-badge { background: var(--SectionTitle); }
-    .output .block[data-type="PageBreak"] .type-badge { background: var(--PageBreak); }
-    .output .block[data-type="PageFooter"] .type-badge { background: var(--PageFooter); }
-    .output .block[data-type="PageHeader"] .type-badge { background: var(--PageHeader); }
-    .output .block[data-type="List"] .type-badge { background: var(--List); }
-    .output .block[data-type="Figure"] .type-badge { background: var(--Figure); }
-    .output .block[data-type="DefinitionList"] .type-badge { background: var(--DefinitionList); }
-    .output .block[data-type="TableOfContents"] .type-badge { background: var(--TableOfContents); }
-    .output .block[data-type="Document"] .type-badge { background: var(--Document); }
+    /* Badges share the same background as borders (override any per-type tints) */
+    .output .block[data-type] .type-badge { background: var(--border); }
 
     /* Highlight overlays via background on lines for the node’s type (gated by visibility classes) */
     .type-visible-Paragraph .output .line[data-type="Paragraph"] { background: var(--Paragraph); }
@@ -277,6 +277,7 @@
     let visibleTypes = new Set(); // which types are toggled visible
     let selectedNodeId = null;
     let collapseAll = false;
+    let showWhitespace = true; // whether to visualize spaces and tabs
     let isDragging = false;
     let containerRect = null;
     let minLeftPx = 740; // will be recomputed based on 72ch
@@ -318,6 +319,21 @@
       legendEl.innerHTML = '';
       const frag = document.createDocumentFragment();
 
+      // Global controls
+      const wsItem = document.createElement('label');
+      wsItem.className = 'item';
+      const wsCheck = document.createElement('input');
+      wsCheck.type = 'checkbox';
+      wsCheck.checked = showWhitespace;
+      const wsLabel = document.createElement('span');
+      wsLabel.textContent = 'Show whitespace';
+      wsItem.append(wsCheck, wsLabel);
+      wsCheck.addEventListener('change', () => {
+        showWhitespace = wsCheck.checked;
+        applyWhitespaceVisibility();
+      });
+      frag.appendChild(wsItem);
+
       // Enable present types by default
       visibleTypes = new Set(typesInUse);
       for (const type of KNOWN_TYPES) {
@@ -345,6 +361,43 @@
         frag.appendChild(item);
       }
       legendEl.appendChild(frag);
+    }
+
+    function renderWhitespaceSpans(target, raw) {
+      // Render raw text into target span with visible markers for spaces/tabs
+      target.textContent = '';
+      let buffer = '';
+      function flushBuffer() {
+        if (buffer) { target.appendChild(document.createTextNode(buffer)); buffer = ''; }
+      }
+      for (let index = 0; index < raw.length; index += 1) {
+        const ch = raw[index];
+        if (ch === ' ') {
+          flushBuffer();
+          const mark = document.createElement('span');
+          mark.className = 'ws ws-space';
+          mark.textContent = '·';
+          target.appendChild(mark);
+        } else if (ch === '\t') {
+          flushBuffer();
+          const mark = document.createElement('span');
+          mark.className = 'ws ws-tab';
+          mark.textContent = '⇥';
+          target.appendChild(mark);
+        } else {
+          buffer += ch;
+        }
+      }
+      flushBuffer();
+    }
+
+    function applyWhitespaceVisibility() {
+      const lines = outputEl.querySelectorAll('.line');
+      for (const span of lines) {
+        if (span.classList.contains('page-break')) { continue; }
+        const raw = span.dataset.raw ?? '';
+        if (showWhitespace) { renderWhitespaceSpans(span, raw); } else { span.textContent = raw; }
+      }
     }
 
     function setLeftWidth(px) {
@@ -557,7 +610,8 @@
             span.textContent = '␌'; // SYMBOL FOR FORM FEED to visualize page breaks
           } else {
             // Use textContent with white-space: pre to preserve spacing
-            span.textContent = text;
+            span.dataset.raw = text;
+            if (showWhitespace) { renderWhitespaceSpans(span, text); } else { span.textContent = text; }
           }
           block.appendChild(span);
           nodeLines.get(nodeId).push(span);
@@ -579,6 +633,7 @@
       outputEl.appendChild(frag);
       buildLegend(typesInUse);
       updateCollapseStates();
+      applyWhitespaceVisibility();
       setStatus('Rendered ' + totalLines + ' lines.');
     }
 
@@ -854,7 +909,8 @@
         probe.style.visibility = 'hidden';
         probe.style.width = '72ch';
         probe.style.whiteSpace = 'pre';
-        probe.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+        // Match body/output font preference
+        probe.style.fontFamily = 'Consolas, monospace';
         probe.style.fontSize = getComputedStyle(document.documentElement).getPropertyValue('--code-size') || '13px';
         document.body.appendChild(probe);
         const width = Math.ceil(probe.getBoundingClientRect().width);
