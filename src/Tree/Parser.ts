@@ -7,9 +7,12 @@ import type {TreeNode} from "./Node/TreeNode.js";
 import {IndentedBlockMatcher} from "./Matcher/IndentedBlockMatcher.js";
 import {ParagraphMatcher} from "./Matcher/ParagraphMatcher.js";
 import {BlankLineMatcher} from "./Matcher/BlankLineMatcher.js";
+import {MetadataMatcher} from "./Matcher/MetadataMatcher.js";
+import {TitleMatcher} from "./Matcher/TitleMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
+import type {ParserState} from "./ParserState.js";
 
 export const getIndentation = (line: string) => {
     const m = line.match(/^\s*/);
@@ -37,19 +40,23 @@ export function rangeFrom(
     }
 }
 
-function createContext(cursor: ArrayCursor<string>): BlockContext {
+function createContext(cursor: ArrayCursor<string>, state: ParserState): BlockContext {
     return {
         cursor,
         peek: (offset: number) => cursor.peek(offset),
         advance: () => {
             cursor.next();
-        }
+        },
+        state,
     };
 }
 
 export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}): DocumentNode {
+    const state: ParserState = { seenMetadata: false, seenTitle: false };
     const builtInMatchers: BlockMatcher[] = [
+        MetadataMatcher,
         BlankLineMatcher,
+        TitleMatcher,
         IndentedBlockMatcher,
         ParagraphMatcher,
     ];
@@ -58,7 +65,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
     const allMatchers = [...customMatchers, ...builtInMatchers].sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
 
     const children: TreeNode[] = [];
-    const context = createContext(cursor);
+    const context = createContext(cursor, state);
 
     while (!cursor.isEOL()) {
         let matched: BlockMatcher | null = null;
