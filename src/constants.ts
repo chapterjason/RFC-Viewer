@@ -1,0 +1,1 @@
+export const WARP_LINE_LENGTH = 72;

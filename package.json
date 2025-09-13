@@ -1,0 +1,27 @@
+{
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node --enable-source-maps dist/index.js",
+    "watch": "tsc -p tsconfig.json --watch",
+    "dev:build": "tsc -p tsconfig.json --watch",
+    "dev:run": "node --enable-source-maps --watch dist/index.js",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prestart": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "diff": "^8.0.2",
+    "jsonschema": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.3",
+    "typescript": "^5.9.2",
+    "vitest": "^2.0.5",
+    "@vitest/coverage-v8": "^2.0.5"
+  }
+}

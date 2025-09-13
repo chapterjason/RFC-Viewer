@@ -1,0 +1,1 @@
+export const isBlankLine = (line: string | null) => line !== null && /^\s*$/.test(line);

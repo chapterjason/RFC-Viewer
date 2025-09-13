@@ -1,0 +1,35 @@
+import {isBlankLine} from "../../Utils/IsBlankLine.js";
+import type {IndentedBlockNode} from "../Node/IndentedBlockNode.js";
+import {getIndentation, makePosition, sliceLineText} from "../Parser.js";
+import type {BlockMatcher} from "../BlockMatcher.js";
+
+export const IndentedBlockMatcher: BlockMatcher = {
+    name: "indentedBlock",
+    priority: 50,
+    test: (context) => {
+        const line = context.peek(0);
+        return line !== null && getIndentation(line) >= 4;
+    },
+    parse: (context) => {
+        const start = makePosition(context.cursor, 0);
+        const lines: string[] = [];
+        const base = Math.min(4, getIndentation(context.peek(0)!));
+        while (!context.cursor.isEOL()) {
+            const s = context.peek(0)!;
+            if (isBlankLine(s)) {
+                break;
+            }
+            if (getIndentation(s) < base) {
+                break;
+            }
+            lines.push(sliceLineText(s, base));
+            context.advance();
+        }
+        return {
+            type: "IndentedBlock",
+            indent: base,
+            lines,
+            position: {start, end: makePosition(context.cursor, 0)}
+        } as IndentedBlockNode;
+    },
+};
