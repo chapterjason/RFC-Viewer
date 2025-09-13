@@ -30,6 +30,8 @@ import {renderHttpResponse} from "./RenderHttpResponse.js";
 import type {HttpResponseNode} from "../Node/HttpResponseNode.js";
 import {renderHttpRequest} from "./RenderHttpRequest.js";
 import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
+import {renderAbnf} from "./RenderAbnf.js";
+import type {AbnfNode} from "../Node/AbnfNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -65,6 +67,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderHttpResponse(node as HttpResponseNode);
         case "HttpRequest":
             return renderHttpRequest(node as HttpRequestNode);
+        case "Abnf":
+            return renderAbnf(node as AbnfNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:

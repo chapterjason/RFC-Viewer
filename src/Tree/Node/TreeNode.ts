@@ -14,6 +14,7 @@ import type {DefinitionListNode} from "./DefinitionListNode.js";
 import type {FigureNode} from "./FigureNode.js";
 import type {HttpResponseNode} from "./HttpResponseNode.js";
 import type {HttpRequestNode} from "./HttpRequestNode.js";
+import type {AbnfNode} from "./AbnfNode.js";
 
 export type TreeNode =
     DocumentNode
@@ -31,4 +32,5 @@ export type TreeNode =
     | DefinitionListNode
     | FigureNode
     | HttpResponseNode
-    | HttpRequestNode;
+    | HttpRequestNode
+    | AbnfNode;
