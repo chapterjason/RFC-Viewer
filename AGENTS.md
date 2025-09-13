@@ -43,6 +43,22 @@
 - Use short RFC-like snippets embedded directly in tests as string arrays; include several lines of context before and after each snippet to exercise matcher integration. Do not read files from outside `tests/`.
 - Normalize line endings to `\n` in test strings and keep runs deterministic (no network or writes).
 
+### Test Structure
+- Prefer AAA comments to delineate phases when it adds clarity:
+  - `// Arrange: ...` — set up inputs and state. Optional, but include it when setup is non-trivial or improves readability.
+  - `// Act: ...` — perform the operation under test. Allowed multiple times within a test.
+  - `// Assert: ...` — verify outcomes. Allowed multiple times within a test.
+- Use `// Act & Assert: ...` only when the assertion itself triggers the behavior under test and there is no meaningful intermediate state to capture.
+  - Good uses: exception checks like `expect(() => sut.prev()).toThrowError('Start of cursor')`, immediate boolean/predicate checks like `expect(isBlankLine(line)).toBe(true)`.
+  - Prefer separate `// Act` then `// Assert` when an operation returns a value or mutates state that you then verify (e.g., `const result = sut.readAmount(2); expect(result...).` and subsequent state assertions).
+- Omit comments only when the phase is self-evident; comments should aid readability, not add noise.
+
+### Test Naming and Variables
+- Use `sut` to refer to the primary System Under Test when it is an object or instance (e.g., a class instance). Do not assign bare functions to `sut`; call them directly in the Act section.
+- Prefer descriptive helpers for expectations, e.g., `actualValue`, `expectedValue`, or more specific names like `actualKinds`/`expectedKinds`.
+- Keep variable names explicit and avoid single-letter identifiers in tests, matching code style rules.
+ - Do not create variables for atomic literal expectations (e.g., `const expectedValue = false`). Assert inline with the literal.
+
 ## CI Policy
 - No CI is used for this project. Do not add workflow files or badges.
 - Ensure `npm run typecheck` and `npm test` pass locally before opening a PR.
