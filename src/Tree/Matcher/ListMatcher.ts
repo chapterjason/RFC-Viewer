@@ -135,6 +135,7 @@ export const ListMatcher: BlockMatcher = {
         const start = makePosition(context.cursor, 0);
         const items: ListItemNode[] = [];
         let listBaseIndent: number | null = null;
+        let listMarkerIndent: number | null = null;
 
         while (!context.cursor.isEOL()) {
             const line = context.peek(0);
@@ -148,7 +149,13 @@ export const ListMatcher: BlockMatcher = {
                 break;
             }
 
-            const match = detectListMarker(line);
+            let match = detectListMarker(line);
+            // Only allow a new item if the marker aligns to the first
+            // item's marker indentation. This avoids misclassifying tokens
+            // like "(PKIX)" under the content column as a new item.
+            if (match && listMarkerIndent !== null && match.leadingIndent !== listMarkerIndent) {
+                match = null;
+            }
             if (!match) {
                 // Not a new list item — if this line is indented to at least the
                 // current item's content indent, treat it as a continuation line;
@@ -199,6 +206,9 @@ export const ListMatcher: BlockMatcher = {
 
             if (listBaseIndent === null) {
                 listBaseIndent = Math.min(getIndentation(originalLine), item.contentIndent);
+            }
+            if (listMarkerIndent === null) {
+                listMarkerIndent = match.leadingIndent;
             }
 
             // Read continuation lines for this item

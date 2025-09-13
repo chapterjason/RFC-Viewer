@@ -159,4 +159,36 @@ describe('ListMatcher', () => {
         // Assert: remains a SectionTitle then TableOfContents then BlankLine
         expect(kinds).toEqual(['SectionTitle', 'BlankLine', 'TableOfContents', 'BlankLine']);
     });
+
+    it('does not start a new item when the marker indent differs (e.g., (PKIX) under content column)', () => {
+        // Arrange: RFC-style reference where a parenthetical token appears under the content column
+        // and should NOT be treated as a new list item.
+        const lines = [
+            '',
+            '   [RFC6125]  Saint-Andre, P. and J. Hodges, "Representation and',
+            '              Verification of Domain-Based Application Service Identity',
+            '              within Internet Public Key Infrastructure Using X.509',
+            '              (PKIX) Certificates in the Context of Transport Layer',
+            '              Security (TLS)", RFC 6125, March 2011.',
+            '',
+            '   [USASCII]  American National Standards Institute, "Coded Character',
+            '              Set -- 7-bit American Standard Code for Information',
+            '              Interchange", ANSI X3.4, 1986.',
+            '',
+        ];
+        // Act: parse entire document because snippet includes leading/trailing blanks
+        const doc = parse(new ArrayCursor(lines));
+        const listNodes = doc.children.filter((n: any) => n.type === 'List');
+
+        // Assert: two separate lists, each with one item
+        expect(listNodes.length).toBe(2);
+        const firstList: any = listNodes[0];
+        expect(firstList.items.length).toBe(1);
+        expect(firstList.items[0].marker).toBe('[RFC6125]');
+        const joined = firstList.items[0].lines.join('\n');
+        expect(joined).toMatch(/\(PKIX\)\s+Certificates/);
+        const secondList: any = listNodes[1];
+        expect(secondList.items.length).toBe(1);
+        expect(secondList.items[0].marker).toBe('[USASCII]');
+    });
 });
