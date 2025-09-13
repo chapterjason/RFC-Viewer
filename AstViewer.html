@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AST Text Renderer & Inspector</title>
+  <style>
+    :root {
+      --bg: #0b0c0f;
+      --panel: #12141a;
+      --muted: #a6adbb;
+      --text: #e7e9ee;
+      --accent: #7aa2f7;
+      --danger: #ff6b6b;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --border: #1f2430;
+
+      /* Type colors (colorblind-friendly, muted yet distinct) */
+      --Paragraph: rgba(92, 126, 196, 0.20);
+      --BlankLine: rgba(130, 138, 147, 0.12);
+      --IndentedBlock: rgba(151, 108, 186, 0.22);
+      --Metadata: rgba(196, 151, 92, 0.22);
+      --Title: rgba(94, 166, 120, 0.22);
+      --SectionTitle: rgba(179, 104, 104, 0.22);
+      --PageBreak: rgba(114, 124, 202, 0.22);
+      --PageFooter: rgba(196, 132, 92, 0.22);
+      --PageHeader: rgba(92, 152, 184, 0.22);
+      --List: rgba(92, 178, 168, 0.22);
+      --Document: rgba(255, 255, 255, 0.04);
+
+      /* Sizing */
+      --code-size: 14px;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: var(--text);
+      background: var(--bg);
+    }
+    /* drag guide for splitter (no layout during drag) */
+    .splitter-guide { position: absolute; top: 0; bottom: 0; width: 6px; background: #1d2a45; border-left: 1px solid var(--border); border-right: 1px solid var(--border); pointer-events: none; z-index: 10; }
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    header h1 { font-size: 14px; margin: 0; font-weight: 600; letter-spacing: 0.3px; }
+    header .actions { margin-left: auto; display: flex; gap: 8px; }
+    button, .btn {
+      background: #1b2331;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    button:hover { border-color: #2b3445; }
+    .layout {
+      display: grid;
+      position: relative;
+      grid-template-columns: var(--left-width, 60%) 6px 1fr; /* left | splitter | right */
+      gap: 0;
+      height: 100%;
+    }
+    .splitter {
+      background: #101521;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      cursor: col-resize;
+    }
+    .splitter:hover { background: #162033; }
+    body.dragging .splitter { background: #1d2a45; }
+    body.dragging { user-select: none; cursor: col-resize; }
+    .panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    .panel:last-child { border-right: none; }
+    .panel header { border: none; border-bottom: 1px solid var(--border); }
+    .panel .body { flex: 1; min-height: 0; }
+
+    .input-wrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+    .input-controls { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    textarea {
+      width: 100%; height: 100%; box-sizing: border-box; resize: none; outline: none;
+      border: 1px solid var(--border); background: #0c111b; color: var(--text);
+      padding: 12px; font-size: var(--code-size); line-height: 1.6;
+      border-radius: 8px;
+      tab-size: 4;
+    }
+    textarea:focus {
+      border-color: #2b3445;
+      box-shadow: inset 0 0 0 1px #2b3445, 0 0 0 2px rgba(122,162,247,0.15);
+    }
+
+    .render-wrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #0f1320; }
+    .legend .item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+    .legend .swatch { width: 12px; height: 12px; border-radius: 3px; outline: 1px solid var(--border); }
+    .legend .item input { margin: 0; }
+
+    .layout, .panel { min-height: 0; }
+    .render-area { position: relative; height: 100%; overflow: auto; }
+    .output {
+      position: relative; margin: 0; padding: 8px 12px; background: transparent;
+      border: none; color: var(--text); white-space: pre; line-height: 1.6; font-size: var(--code-size);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-variant-ligatures: none;
+    }
+    .output .line { display: block; }
+    .output .line::selection { background: rgba(122, 162, 247, 0.35); }
+    /* Ensure blank lines occupy vertical space without inserting spaces */
+    .output .line:empty::before { content: "\200B"; }
+    /* Visualize page breaks explicitly */
+    .output .line.page-break { color: var(--muted); }
+
+    /* Node block container to group multi-line nodes for unified outlines */
+    .output .block { display: block; position: relative; }
+    .output .block.hover { outline: 1px solid #2d3b59; outline-offset: -1px; }
+    .output .block.selected { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+    /* Small type label at top-right of each block */
+    .output .block .type-badge {
+      position: absolute;
+      top: 2px;
+      right: 6px;
+      font-size: 10px;
+      line-height: 1;
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 4px;
+      pointer-events: none; /* do not block clicks on the block */
+      opacity: 0.9;
+    }
+
+    /* Tint labels by type */
+    .output .block[data-type="Paragraph"] .type-badge { background: var(--Paragraph); }
+    .output .block[data-type="BlankLine"] .type-badge { background: var(--BlankLine); }
+    .output .block[data-type="IndentedBlock"] .type-badge { background: var(--IndentedBlock); }
+    .output .block[data-type="Metadata"] .type-badge { background: var(--Metadata); }
+    .output .block[data-type="Title"] .type-badge { background: var(--Title); }
+    .output .block[data-type="SectionTitle"] .type-badge { background: var(--SectionTitle); }
+    .output .block[data-type="PageBreak"] .type-badge { background: var(--PageBreak); }
+    .output .block[data-type="PageFooter"] .type-badge { background: var(--PageFooter); }
+    .output .block[data-type="PageHeader"] .type-badge { background: var(--PageHeader); }
+    .output .block[data-type="List"] .type-badge { background: var(--List); }
+    .output .block[data-type="Document"] .type-badge { background: var(--Document); }
+
+    /* Highlight overlays via background on lines for the node’s type (gated by visibility classes) */
+    .type-visible-Paragraph .output .line[data-type="Paragraph"] { background: var(--Paragraph); }
+    .type-visible-BlankLine .output .line[data-type="BlankLine"] { background: var(--BlankLine); }
+    .type-visible-IndentedBlock .output .line[data-type="IndentedBlock"] { background: var(--IndentedBlock); }
+    .type-visible-Metadata .output .line[data-type="Metadata"] { background: var(--Metadata); }
+    .type-visible-Title .output .line[data-type="Title"] { background: var(--Title); }
+    .type-visible-SectionTitle .output .line[data-type="SectionTitle"] { background: var(--SectionTitle); }
+    .type-visible-PageBreak .output .line[data-type="PageBreak"] { background: var(--PageBreak); }
+    .type-visible-PageFooter .output .line[data-type="PageFooter"] { background: var(--PageFooter); }
+    .type-visible-PageHeader .output .line[data-type="PageHeader"] { background: var(--PageHeader); }
+    .type-visible-List .output .line[data-type="List"] { background: var(--List); }
+    .type-visible-Document .output .line[data-type="Document"] { background: var(--Document); }
+
+    /* Hover and selection are now applied to .block containers */
+
+    .details { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+    .details .header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #0f1320; }
+    .details .header .title { font-size: 12px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
+    .details .content { height: 100%; overflow: auto; }
+    .details pre { margin: 0; padding: 12px; white-space: pre; font-size: 12px; line-height: 1.45; }
+
+    .status { font-size: 12px; color: var(--muted); padding: 8px 12px; border-top: 1px solid var(--border); }
+    .error { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="app" style="grid-template-rows: auto auto 1fr auto; height: 100vh;">
+    <header style="gap: 16px; align-items: flex-start;">
+      <h1>AST Text Renderer & Inspector</h1>
+      <div class="actions" style="align-items: center; gap: 10px; margin-left: auto;">
+        <button id="btnRender">Render</button>
+        <button id="btnSample" title="Insert a small sample AST">Sample</button>
+        <button id="btnClear">Clear</button>
+      </div>
+      <div style="display:flex; flex-direction: column; gap: 4px; width: min(900px, 55vw); min-width: 300px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="muted">AST JSON</span>
+          <small class="muted">Document node expected</small>
+        </div>
+        <div class="input-controls" style="gap: 6px;">
+          <button id="btnOpenFile" title="Select a local file (.txt or .json)">Open File</button>
+          <input id="fileInput" type="file" accept=".txt,.json,text/plain,application/json" style="display:none" />
+          <input id="urlInput" type="url" placeholder="https://www.rfc-editor.org/rfc/rfc6749.txt" value="https://www.rfc-editor.org/rfc/rfc6749.txt" style="flex: 1 1 420px; min-width: 180px; max-width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: #0c111b; color: var(--text);" />
+          <button id="btnFetchUrl" title="Fetch URL and parse as RFC text">Fetch URL</button>
+        </div>
+        <textarea id="input" rows="2" placeholder='{"type":"Document","children":[...]}'></textarea>
+      </div>
+    </header>
+
+    <div class="legend" id="legend" style="border-top: 1px solid var(--border);"></div>
+
+    <div class="layout" id="mainLayout" style="height: 100%; min-height: 0;">
+      <div class="panel render-panel" style="border-right: 1px solid var(--border); min-height: 0;">
+        <div class="render-area" id="renderArea" style="height: 100%; min-height: 0;">
+          <pre class="output" id="output"></pre>
+        </div>
+      </div>
+      <div class="splitter" id="splitter" aria-label="Resize panels" role="separator" aria-orientation="vertical" tabindex="0"></div>
+      <div class="panel" style="min-height: 0;">
+        <div class="details">
+          <div class="header">
+            <span class="title">Selected Node</span>
+            <span id="selInfo" class="muted"></span>
+            <div style="margin-left: auto; display:flex; gap: 8px;">
+              <button id="btnClearSelection">Clear Selection</button>
+            </div>
+          </div>
+          <div class="content"><pre id="nodeJson">(none)</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script type="module">
+    import { renderNode } from './dist/Tree/Render/RenderNode.js';
+    import { parse } from './dist/Tree/Parser.js';
+    import { ArrayCursor } from './dist/Utils/ArrayCursor.js';
+
+    // UI logic
+    const inputEl = document.getElementById('input');
+    const outputEl = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const legendEl = document.getElementById('legend');
+    const nodeJsonEl = document.getElementById('nodeJson');
+    const selInfoEl = document.getElementById('selInfo');
+
+    const btnRender = document.getElementById('btnRender');
+    const btnSample = document.getElementById('btnSample');
+    const btnClear = document.getElementById('btnClear');
+    const btnClearSelection = document.getElementById('btnClearSelection');
+    const urlInput = document.getElementById('urlInput');
+    const btnFetchUrl = document.getElementById('btnFetchUrl');
+    const btnOpenFile = document.getElementById('btnOpenFile');
+    const fileInput = document.getElementById('fileInput');
+    const layoutEl = document.getElementById('mainLayout');
+    const splitterEl = document.getElementById('splitter');
+
+    let currentAst = null;
+    let nodeMap = new Map(); // nodeId -> node
+    let nodeLines = new Map(); // nodeId -> array of line elements
+    let nodeContainers = new Map(); // nodeId -> block container element
+    let visibleTypes = new Set(); // which types are toggled visible
+    let selectedNodeId = null;
+    let isDragging = false;
+    let containerRect = null;
+    let minLeftPx = 740; // will be recomputed based on 72ch
+    let minRightPx = 240; // slightly smaller JSON panel for compactness
+    let currentLeft = null;
+
+    const KNOWN_TYPES = [
+      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','BlankLine','PageHeader','PageFooter','PageBreak'
+    ];
+    const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
+
+    function setStatus(text, isError=false) {
+      statusEl.textContent = text || '';
+      statusEl.classList.toggle('error', !!isError);
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function clearRender() {
+      outputEl.innerHTML = '';
+      legendEl.innerHTML = '';
+      nodeMap.clear();
+      nodeLines.clear();
+      nodeContainers.clear();
+      selectedNodeId = null;
+      nodeJsonEl.textContent = '(none)';
+      selInfoEl.textContent = '';
+    }
+
+    function makeNodeId(node, index) {
+      // Prefer stable key: type@startLine:startColumn-endLine:endColumn#index
+      const p = node.position || { start: {line: 0, column: 0}, end: {line: 0, column: 0} };
+      return `${node.type}@${p.start?.line ?? 0}:${p.start?.column ?? 0}-${p.end?.line ?? 0}:${p.end?.column ?? 0}#${index}`;
+    }
+
+    function buildLegend(typesInUse) {
+      legendEl.innerHTML = '';
+      const frag = document.createDocumentFragment();
+
+      // Enable present types by default
+      visibleTypes = new Set(typesInUse);
+      for (const type of KNOWN_TYPES) {
+        document.body.classList.toggle('type-visible-' + type, visibleTypes.has(type));
+      }
+
+      for (const type of KNOWN_TYPES) {
+        if (!typesInUse.has(type)) { continue; }
+        const item = document.createElement('label');
+        item.className = 'item';
+        const swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        swatch.style.background = getComputedStyle(document.documentElement).getPropertyValue('--' + type) || '#333';
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = true;
+        check.addEventListener('change', () => {
+          if (check.checked) { visibleTypes.add(type); } else { visibleTypes.delete(type); }
+          document.body.classList.toggle('type-visible-' + type, check.checked);
+        });
+        const label = document.createElement('span');
+        label.textContent = type;
+        item.append(check, swatch, label);
+        frag.appendChild(item);
+      }
+      legendEl.appendChild(frag);
+    }
+
+    function setLeftWidth(px) {
+      currentLeft = px;
+      layoutEl.style.gridTemplateColumns = px + 'px 6px 1fr';
+    }
+
+    let dragRaf = null; let pendingX = null; let guideEl = null; let dragPos = null;
+    function ensureGuide() {
+      if (!guideEl) {
+        guideEl = document.createElement('div');
+        guideEl.className = 'splitter-guide';
+        layoutEl.appendChild(guideEl);
+      }
+      return guideEl;
+    }
+    function positionGuide(x) {
+      const guide = ensureGuide();
+      guide.style.left = x + 'px';
+    }
+    function clampLeft(x, containerWidth) {
+      const splitterWidth = 6; // matches CSS
+      const maxLeft = containerWidth - splitterWidth - minRightPx;
+      return Math.max(minLeftPx, Math.min(x, maxLeft));
+    }
+    function startDrag(e) {
+      isDragging = true;
+      containerRect = layoutEl.getBoundingClientRect();
+      document.body.classList.add('dragging');
+      e.preventDefault();
+      const startLeft = currentLeft == null ? Math.round(containerRect.width * 0.6) : currentLeft;
+      const clamped = clampLeft(startLeft, containerRect.width);
+      dragPos = clamped;
+      positionGuide(clamped);
+    }
+    function applyDrag(x) {
+      const clamped = clampLeft(x, containerRect.width);
+      dragPos = clamped;
+      positionGuide(clamped);
+    }
+    function onDrag(e) {
+      if (!isDragging) { return; }
+      const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+      if (typeof clientX !== 'number') { return; }
+      pendingX = clientX - containerRect.left;
+      if (dragRaf == null) {
+        dragRaf = requestAnimationFrame(() => {
+          dragRaf = null;
+          if (pendingX != null) { applyDrag(pendingX); pendingX = null; }
+        });
+      }
+    }
+    function endDrag() {
+      if (!isDragging) { return; }
+      isDragging = false;
+      document.body.classList.remove('dragging');
+      if (dragRaf != null) { cancelAnimationFrame(dragRaf); dragRaf = null; }
+      if (dragPos != null) { setLeftWidth(dragPos); }
+      pendingX = null; dragPos = null;
+      if (guideEl && guideEl.parentNode) { guideEl.parentNode.removeChild(guideEl); }
+      guideEl = null;
+    }
+    // Keyboard resizing for accessibility and precision
+    splitterEl.addEventListener('keydown', (event) => {
+      const step = (event.shiftKey ? 64 : 16);
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        const dir = event.key === 'ArrowLeft' ? -1 : 1;
+        const rect = layoutEl.getBoundingClientRect();
+        const next = clampLeft((currentLeft ?? Math.round(rect.width * 0.6)) + dir * step, rect.width);
+        setLeftWidth(next);
+        event.preventDefault();
+      }
+    });
+
+    function attachBlockInteractions(blockEl, nodeId) {
+      blockEl.addEventListener('mouseenter', () => {
+        blockEl.classList.add('hover');
+        const node = nodeMap.get(nodeId);
+        if (node) { selInfoEl.textContent = `${node.type}`; }
+      });
+      blockEl.addEventListener('mouseleave', () => {
+        blockEl.classList.remove('hover');
+        selInfoEl.textContent = selectedNodeId ? selInfoEl.textContent : '';
+      });
+      blockEl.addEventListener('click', () => selectNode(nodeId));
+    }
+
+    function selectNode(nodeId) {
+      if (selectedNodeId === nodeId) { return; }
+      // Clear previous
+      if (selectedNodeId) {
+        const prev = nodeContainers.get(selectedNodeId);
+        if (prev) { prev.classList.remove('selected'); }
+      }
+      selectedNodeId = nodeId;
+      const container = nodeContainers.get(nodeId);
+      if (container) { container.classList.add('selected'); }
+      const node = nodeMap.get(nodeId);
+      if (node) {
+        nodeJsonEl.textContent = JSON.stringify(node, null, 2);
+        selInfoEl.textContent = `${node.type}`;
+      }
+      const containerEl = nodeContainers.get(nodeId);
+      if (containerEl) { containerEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    }
+
+    function clearSelection() {
+      if (!selectedNodeId) { return; }
+      const prev = nodeContainers.get(selectedNodeId);
+      if (prev) { prev.classList.remove('selected'); }
+      selectedNodeId = null;
+      nodeJsonEl.textContent = '(none)';
+      selInfoEl.textContent = '';
+    }
+
+    function renderAst(ast) {
+      clearRender();
+      if (!ast || ast.type !== 'Document' || !Array.isArray(ast.children)) {
+        setStatus('Input must be a Document node with children[]', true);
+        return;
+      }
+      currentAst = ast;
+      const typesInUse = new Set();
+      const frag = document.createDocumentFragment();
+      let totalLines = 0;
+
+      // Depth-first render: for each child, render its lines and map lines back to the node
+      let nodeSerial = 0;
+      function renderNodeWithMap(node) {
+        const lines = renderNode(node);
+        const nodeId = makeNodeId(node, nodeSerial++);
+        nodeMap.set(nodeId, node);
+        nodeLines.set(nodeId, []);
+        typesInUse.add(node.type || 'Unknown');
+
+        const block = document.createElement('div');
+        block.className = 'block';
+        block.dataset.nodeId = nodeId;
+        block.dataset.type = node.type || 'Unknown';
+        nodeContainers.set(nodeId, block);
+        attachBlockInteractions(block, nodeId);
+
+        // Type label badge
+        const badge = document.createElement('div');
+        badge.className = 'type-badge';
+        badge.textContent = node.type || 'Unknown';
+        block.appendChild(badge);
+
+        for (let index = 0; index < lines.length; index += 1) {
+          const text = lines[index];
+          const span = document.createElement('span');
+          span.className = 'line';
+          span.dataset.nodeId = nodeId;
+          span.dataset.type = node.type || 'Unknown';
+          if ((node.type || 'Unknown') === 'PageBreak') {
+            span.classList.add('page-break');
+            span.textContent = '␌'; // SYMBOL FOR FORM FEED to visualize page breaks
+          } else {
+            // Use textContent with white-space: pre to preserve spacing
+            span.textContent = text;
+          }
+          block.appendChild(span);
+          nodeLines.get(nodeId).push(span);
+          totalLines += 1;
+        }
+        frag.appendChild(block);
+      }
+
+      for (const child of ast.children) {
+        renderNodeWithMap(child);
+      }
+
+      outputEl.appendChild(frag);
+      buildLegend(typesInUse);
+      setStatus('Rendered ' + totalLines + ' lines.');
+    }
+
+    function parseAndRender() {
+      try {
+        setStatus('');
+        const text = inputEl.value.trim();
+        if (!text) { clearRender(); setStatus('No input'); return; }
+        const ast = JSON.parse(text);
+        renderAst(ast);
+      } catch (e) {
+        clearRender();
+        setStatus('Parse error: ' + (e && e.message ? e.message : String(e)), true);
+      }
+    }
+
+    function toCorsProxy(url) {
+      return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+    }
+
+    async function fetchUrlAndParse(url) {
+      if (!url) { setStatus('Enter a URL to fetch'); return; }
+      try {
+        const effectiveUrl = toCorsProxy(url);
+        setStatus('Fetching: ' + effectiveUrl);
+        const response = await fetch(effectiveUrl, { headers: { 'Accept': 'text/plain, */*;q=0.1' } });
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+        }
+        const raw = await response.text();
+        setStatus('Parsing text...');
+        const normalized = raw.replace(/\r?\n/g, '\n').split('\n');
+        const cursor = new ArrayCursor(normalized);
+        const ast = parse(cursor);
+        const json = JSON.stringify(ast, null, 2);
+        if (json.length <= MAX_INPUT_PREVIEW_BYTES) {
+          inputEl.value = json;
+        } else {
+          inputEl.value = '';
+        }
+        renderAst(ast);
+        const lineCount = document.querySelectorAll('.output .line').length;
+        setStatus('Fetched and parsed. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+      } catch (error) {
+        const message = (error && error.message) ? error.message : String(error);
+        setStatus('Fetch/parse error: ' + message, true);
+      }
+    }
+
+    btnRender.addEventListener('click', parseAndRender);
+    btnClear.addEventListener('click', () => { inputEl.value = ''; clearRender(); setStatus('Cleared'); });
+    btnClearSelection.addEventListener('click', () => { clearSelection(); });
+    btnFetchUrl.addEventListener('click', () => { fetchUrlAndParse(urlInput.value.trim()); });
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); fetchUrlAndParse(urlInput.value.trim()); }
+    });
+    btnOpenFile.addEventListener('click', () => { fileInput.click(); });
+    fileInput.addEventListener('change', async () => {
+      const files = fileInput.files;
+      if (!files || files.length === 0) { return; }
+      const file = files[0];
+      await handleLocalFile(file);
+      // reset to allow re-selecting the same file
+      fileInput.value = '';
+    });
+
+    async function handleLocalFile(file) {
+      try {
+        setStatus('Reading file: ' + file.name);
+        const text = await file.text();
+        const lower = file.name.toLowerCase();
+        if (lower.endsWith('.json')) {
+          setStatus('Parsing JSON AST...');
+          const ast = JSON.parse(text);
+          const json = JSON.stringify(ast, null, 2);
+          if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
+          renderAst(ast);
+          const lineCount = document.querySelectorAll('.output .line').length;
+          setStatus('Loaded JSON. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+          return;
+        }
+        setStatus('Parsing text via project parser...');
+        const normalized = text.replace(/\r?\n/g, '\n').split('\n');
+        const cursor = new ArrayCursor(normalized);
+        const ast = parse(cursor);
+        const json = JSON.stringify(ast, null, 2);
+        if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
+        renderAst(ast);
+        const lineCount = document.querySelectorAll('.output .line').length;
+        setStatus('Loaded text file. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+      } catch (error) {
+        setStatus('File load/parse error: ' + (error && error.message ? error.message : String(error)), true);
+      }
+    }
+    // Splitter events (mouse + touch)
+    splitterEl.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', onDrag);
+    window.addEventListener('mouseup', endDrag);
+    splitterEl.addEventListener('touchstart', (e) => { startDrag(e); }, { passive: false });
+    window.addEventListener('touchmove', (e) => { onDrag(e); }, { passive: false });
+    window.addEventListener('touchend', endDrag);
+    window.addEventListener('touchcancel', endDrag);
+    btnSample.addEventListener('click', () => {
+      const sample = {
+        type: 'Document',
+        position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 14, column: 1, offset: 200 } },
+        children: [
+          { type: 'Title', position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 13, offset: 12 } }, lines: ['Sample RFC'] },
+          { type: 'BlankLine', position: { start: { line: 2, column: 1, offset: 13 }, end: { line: 2, column: 1, offset: 13 } } },
+          { type: 'Metadata', position: { start: { line: 3, column: 1, offset: 14 }, end: { line: 5, column: 1, offset: 40 } }, lines: ['Author: Jane Doe', 'Date: 2025-09-13'] },
+          { type: 'BlankLine', position: { start: { line: 6, column: 1, offset: 41 }, end: { line: 6, column: 1, offset: 41 } } },
+          { type: 'Paragraph', position: { start: { line: 7, column: 1, offset: 42 }, end: { line: 8, column: 1, offset: 120 } }, lines: ['This is a paragraph.', 'It has two lines.'] },
+          { type: 'BlankLine', position: { start: { line: 9, column: 1, offset: 121 }, end: { line: 9, column: 1, offset: 121 } } },
+          { type: 'List', position: { start: { line: 10, column: 1, offset: 122 }, end: { line: 13, column: 1, offset: 200 } }, items: [
+            { marker: '-', markerIndent: 0, contentIndent: 2, lines: [' First item', ' continuation line'] },
+            { marker: '*', markerIndent: 0, contentIndent: 2, lines: [' Second item'] }
+          ]},
+          { type: 'BlankLine', position: { start: { line: 14, column: 1, offset: 200 }, end: { line: 14, column: 1, offset: 200 } } }
+        ]
+      };
+      inputEl.value = JSON.stringify(sample, null, 2);
+      parseAndRender();
+    });
+
+    // Init: compute 72ch minimum and set default split
+    (function initLayout() {
+      function computeMinLeftFromCh() {
+        const probe = document.createElement('div');
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        probe.style.width = '72ch';
+        probe.style.whiteSpace = 'pre';
+        probe.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+        probe.style.fontSize = getComputedStyle(document.documentElement).getPropertyValue('--code-size') || '13px';
+        document.body.appendChild(probe);
+        const width = Math.ceil(probe.getBoundingClientRect().width);
+        probe.remove();
+        return Math.max(400, width + 32); // account for padding; clamp to reasonable minimum
+      }
+      minLeftPx = computeMinLeftFromCh();
+      const rect = layoutEl.getBoundingClientRect();
+      const defaultLeft = Math.max(minLeftPx, Math.round(rect.width * 0.58));
+      setLeftWidth(defaultLeft);
+      window.addEventListener('resize', () => {
+        minLeftPx = computeMinLeftFromCh();
+        const rect2 = layoutEl.getBoundingClientRect();
+        const splitterWidth = 6; // CSS width
+        const maxLeft = rect2.width - splitterWidth - minRightPx;
+        const left = currentLeft == null ? defaultLeft : currentLeft;
+        setLeftWidth(Math.max(minLeftPx, Math.min(left, maxLeft)));
+      });
+    })();
+
+    // Auto-render sample on load to show UI
+    btnSample.click();
+  </script>
+</body>
+</html>
