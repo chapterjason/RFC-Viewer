@@ -27,7 +27,7 @@ describe('DefinitionListMatcher', () => {
         expect(defList.items[0].definitionIndent).toBeGreaterThan(defList.items[0].termIndent);
     });
 
-    it('parses multiple consecutive definitions as one list', () => {
+  it('parses multiple consecutive definitions as one list', () => {
         // Arrange
         const snippetWithContext = [
             '   client',
@@ -47,7 +47,28 @@ describe('DefinitionListMatcher', () => {
         expect(defList.items.length).toBe(2);
         expect(defList.items[0].term).toBe('client');
         expect(defList.items[1].term).toBe('authorization server');
-    });
+  });
+
+  it('detects template-style terms ending with colon followed by indented definition', () => {
+    // Arrange: matches Registration Template style
+    const snippetWithContext = [
+      '   Error name:',
+      '      The name requested (e.g., "example").',
+      '      Values for the error name MUST NOT include characters',
+      '      outside the set %x20-21 / %x23-5B / %x5D-7E.',
+    ];
+
+    // Act
+    const doc = parse(new ArrayCursor(snippetWithContext));
+    const kinds = doc.children.map((n: any) => n.type);
+
+    // Assert: single DefinitionList node
+    expect(kinds).toEqual(['DefinitionList']);
+    const defList: any = doc.children[0];
+    expect(defList.items.length).toBe(1);
+    expect(defList.items[0].term).toBe('Error name:');
+    expect(defList.items[0].lines.length).toBeGreaterThanOrEqual(3);
+  });
 
     it('parses nested definition items under a parent definition', () => {
         // Arrange: parent term with deeper child terms

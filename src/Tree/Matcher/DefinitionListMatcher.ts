@@ -38,11 +38,20 @@ function isTermLine(line: string, next: string | null, allowDeep = false): boole
     if (/\.{2,}\s*\d+\s*$/.test(trimmed)) {
         return false; // looks like ToC
     }
-    if (/[:.;]$/.test(trimmed)) {
+    // Allow trailing ':' for template-style terms (e.g., "Error name:")
+    if (/[.;]$/.test(trimmed)) {
         return false; // likely a sentence, not a term
     }
+    if (/:$/.test(trimmed)) {
+        const body = trimmed.slice(0, -1);
+        // Reject colon-terminated lines that look like sentences (contain a period)
+        if (body.includes('.')) {
+            return false;
+        }
+    }
     // Exclude obvious non-term technical lines (URLs, HTTP methods, paths, params)
-    if (/[\/:?&=]/.test(trimmed)) {
+    // Do not exclude ':' to allow template-style terms
+    if (/[\/?&=]/.test(trimmed)) {
         return false;
     }
     // Avoid list markers

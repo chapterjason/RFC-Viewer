@@ -5,6 +5,7 @@ export interface ListItemNode {
     lines: string[];
     contentIndent: number;
     markerIndent: number;
+    markerOnly?: boolean;
 }
 
 export interface ListNode extends BaseTreeNode {

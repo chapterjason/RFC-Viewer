@@ -11,6 +11,7 @@ interface ListMatch {
     markerLength: number;
     contentIndent: number;
     leadingIndent: number;
+    markerOnly?: boolean;
 }
 
 function detectListMarker(line: string): ListMatch | null {
@@ -61,8 +62,8 @@ function detectListMarker(line: string): ListMatch | null {
         };
     }
 
-    // Alpha with parentheses: "(A)" then spaces
-    m = line.match(/^(\s*)(\([A-Za-z]\))(\s+)(\S.*)?$/);
+    // Alpha/ID with parentheses: "(A)" or "(W3C.REC-...)" then spaces
+    m = line.match(/^(\s*)(\([A-Za-z0-9][A-Za-z0-9.\-]*\))(\s+)(\S.*)?$/);
     if (m) {
         const leading = m[1] ?? '';
         const marker = m[2] ?? '';
@@ -75,17 +76,19 @@ function detectListMarker(line: string): ListMatch | null {
         };
     }
 
-    // Bracketed text: "[TEXT]" then spaces
-    m = line.match(/^(\s*)(\[[^\]]+\])(\s+)(\S.*)?$/);
+    // Bracketed text: "[TEXT]" then optional spaces and optional content
+    m = line.match(/^(\s*)(\[[^\]]+\])(\s*)(\S.*)?$/);
     if (m) {
         const leading = m[1] ?? '';
         const marker = m[2] ?? '';
         const spaces = m[3] ?? '';
+        const hasContent = (m[4] ?? '').length > 0;
         return {
             marker,
             markerLength: marker.length,
             contentIndent: leading.length + marker.length + spaces.length,
             leadingIndent: leading.length,
+            markerOnly: !hasContent && spaces.length === 0,
         };
     }
 
@@ -106,11 +109,7 @@ export const ListMatcher: BlockMatcher = {
     parse: (context) => {
         const start = makePosition(context.cursor, 0);
         const items: ListItemNode[] = [];
-
-        // Establish base indentation from the first item
-        const firstLine = context.peek(0)!;
-        const firstMatch = detectListMarker(firstLine)!;
-        const listBaseIndent = Math.min(getIndentation(firstLine), firstMatch.contentIndent);
+        let listBaseIndent: number | null = null;
 
         while (!context.cursor.isEOL()) {
             const line = context.peek(0);
@@ -144,7 +143,7 @@ export const ListMatcher: BlockMatcher = {
 
             // New list item
             // Enforce that list does not jump to a smaller base indent (likely a new block)
-            if (match.contentIndent < listBaseIndent) {
+            if (listBaseIndent !== null && match.contentIndent < listBaseIndent) {
                 break;
             }
 
@@ -153,11 +152,29 @@ export const ListMatcher: BlockMatcher = {
                 contentIndent: match.contentIndent,
                 markerIndent: match.leadingIndent,
                 lines: [],
+                markerOnly: Boolean(match.markerOnly),
             };
-            // Push the first content line (after marker and required spaces)
-            item.lines.push(sliceLineText(line, match.contentIndent));
+            const originalLine = line;
+            const firstContent = sliceLineText(originalLine, match.contentIndent);
+            if (!match.markerOnly && firstContent.length > 0) {
+                item.lines.push(firstContent);
+                context.advance();
+            } else {
+                // Marker-only line: determine content indent from next line and use it as first content
+                context.advance();
+                const nextLine = context.peek(0);
+                if (nextLine !== null && !isBlankLine(nextLine)) {
+                    const nextIndent = getIndentation(nextLine);
+                    item.contentIndent = nextIndent;
+                    item.lines.push(sliceLineText(nextLine, item.contentIndent));
+                    context.advance();
+                }
+            }
             items.push(item);
-            context.advance();
+
+            if (listBaseIndent === null) {
+                listBaseIndent = Math.min(getIndentation(originalLine), item.contentIndent);
+            }
 
             // Read continuation lines for this item
             while (!context.cursor.isEOL()) {

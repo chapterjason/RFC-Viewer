@@ -127,6 +127,8 @@
 
     /* Node block container to group multi-line nodes for unified outlines */
     .output .block { display: block; position: relative; }
+    /* Make labels non-selectable so they don't end up in clipboard */
+    .output .block .type-badge { user-select: none; -webkit-user-select: none; -moz-user-select: none; pointer-events: none; }
     .output .block .summary { display: none; color: var(--muted); padding-left: 8px; }
     /* When collapsed, hide the entire block to focus only on checked types */
     .output .block.collapsed { display: none; }
@@ -521,6 +523,8 @@
         const badge = document.createElement('div');
         badge.className = 'type-badge';
         badge.textContent = node.type || 'Unknown';
+        badge.setAttribute('aria-hidden', 'true');
+        badge.setAttribute('role', 'presentation');
         block.appendChild(badge);
 
         // No per-block toggles; collapse is global-only

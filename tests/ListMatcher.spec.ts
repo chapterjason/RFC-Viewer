@@ -101,6 +101,47 @@ describe('ListMatcher', () => {
         expect(node.items[1].marker).toBe('[AUTHZ]');
     });
 
+    it('parses bracketed reference keys with punctuation and digits', () => {
+        // Arrange: RFC-style reference entry with bracketed key
+        const lines = [
+            '   [W3C.REC-html401-19991224]  HTML 4.01 Specification',
+            '                               December 1999.',
+        ];
+        const context = createTestContext(lines);
+
+        // Act
+        const node = ListMatcher.parse(context) as any;
+
+        // Assert
+        expect(node.type).toBe('List');
+        expect(node.items.length).toBe(1);
+        expect(node.items[0].marker).toBe('[W3C.REC-html401-19991224]');
+        expect(node.items[0].lines[0]).toMatch(/^HTML 4\.01 Specification/);
+        expect(node.items[0].lines[1]).toMatch(/^December 1999\./);
+    });
+
+    it('parses bracketed reference key on its own line with content on next line', () => {
+        // Arrange: matches RFC reference layout where key line carries only the marker
+        const snippetWithContext = [
+            '   [W3C.REC-html401-19991224]',
+            '              Raggett, D., Le Hors, A., and I. Jacobs, "HTML 4.01',
+            '              Specification", World Wide Web Consortium',
+            '',
+        ];
+
+        // Act
+        const doc = parse(new ArrayCursor(snippetWithContext));
+        const kinds = doc.children.map((n: any) => n.type);
+
+        // Assert: a single List followed by BlankLine
+        expect(kinds).toEqual(['List', 'BlankLine']);
+        const list: any = doc.children[0];
+        expect(list.items.length).toBe(1);
+        expect(list.items[0].marker).toBe('[W3C.REC-html401-19991224]');
+        expect(list.items[0].lines[0]).toMatch(/^Raggett, D\./);
+        expect(list.items[0].lines.length).toBe(2);
+    });
+
     it('does not misclassify ToC lines as lists', () => {
         // Arrange: looks like a numbered start but is ToC
         const snippetWithContext = [
