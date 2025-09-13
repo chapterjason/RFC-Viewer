@@ -8,6 +8,7 @@ import type {SectionTitleNode} from "./SectionTitleNode.js";
 import type {PageBreakNode} from "./PageBreakNode.js";
 import type {PageFooterNode} from "./PageFooterNode.js";
 import type {PageHeaderNode} from "./PageHeaderNode.js";
+import type {ListNode} from "./ListNode.js";
 
 export type TreeNode =
     DocumentNode
@@ -19,4 +20,5 @@ export type TreeNode =
     | SectionTitleNode
     | PageBreakNode
     | PageFooterNode
-    | PageHeaderNode;
+    | PageHeaderNode
+    | ListNode;

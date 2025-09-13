@@ -10,6 +10,15 @@ async function main() {
 
     const ast = parse(cursor);
 
+    console.dir(
+        ast.children.filter(item => item.type === 'List')
+        , {
+            depth: null,
+            maxArrayLength: 5000,
+            compact: true,
+        });
+
+    return;
     console.dir(ast, {
         depth: null,
         maxArrayLength: 5000,
