@@ -18,6 +18,21 @@ function isPotentialTocStart(line: string): boolean {
     return numberedStartRegex.test(line) || appendixStartRegex.test(line);
 }
 
+function hasRecentTocHeading(context: any): boolean {
+    // Check up to the previous 3 lines for a non-blank "Table of Contents" heading
+    for (let back = -1; back >= -3; back -= 1) {
+        const prev = context.peek(back);
+        if (prev === null) { break; }
+        if (isBlankLine(prev)) { continue; }
+        if (prev.trim() === 'Table of Contents') {
+            return true;
+        }
+        // First non-blank is not the heading
+        break;
+    }
+    return false;
+}
+
 function parseTocEntryFromLines(lines: string[]): TableOfContentsEntry {
     const first = lines[0] ?? '';
     const indent = getIndentation(first);
@@ -56,15 +71,32 @@ export const TableOfContentsMatcher: BlockMatcher = {
         if (!isPotentialTocStart(line)) {
             return false;
         }
-        // Look ahead up to 2 lines for a leader line to confirm ToC wrap
-        for (let offset = 1; offset <= 2; offset += 1) {
+        // Path A: classic style with dot leaders (same or next lines)
+        for (let offset = 0; offset <= 2; offset += 1) {
             const next = context.peek(offset);
-            if (next === null || isBlankLine(next)) {
-                break;
+            if (next === null || isBlankLine(next)) { break; }
+            if (isLeaderLine(next)) { return true; }
+        }
+        // Path B: RFC 9700 style — no leaders, but immediately after a
+        // "Table of Contents" heading and followed by additional numbered entries.
+        if (!hasRecentTocHeading(context)) {
+            return false;
+        }
+        // Ensure there is at least one more ToC start shortly after the current line
+        let foundStarts = 1; // current line
+        for (let look = 1; look <= 6; look += 1) {
+            const n = context.peek(look);
+            if (n === null) { break; }
+            if (isBlankLine(n)) { break; }
+            if (isPotentialTocStart(n)) {
+                foundStarts += 1;
+                if (foundStarts >= 2) { return true; }
+                continue;
             }
-            if (isLeaderLine(next)) {
-                return true;
-            }
+            // Allow wrapped title continuations that are further indented
+            const currIndent = getIndentation(context.peek(0) ?? '');
+            if (getIndentation(n) > currIndent) { continue; }
+            break;
         }
         return false;
     },

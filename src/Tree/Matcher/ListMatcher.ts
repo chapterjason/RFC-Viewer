@@ -121,6 +121,17 @@ export const ListMatcher: BlockMatcher = {
         if (!match) {
             return false;
         }
+        // Avoid misclassifying Table of Contents entries (RFC 9700 style)
+        // when they appear immediately after a "Table of Contents" heading.
+        for (let back = -1; back >= -3; back -= 1) {
+            const prev = context.peek(back);
+            if (prev === null) { break; }
+            if (isBlankLine(prev)) { continue; }
+            if ((prev.trim()) === 'Table of Contents') {
+                return false;
+            }
+            break;
+        }
         // Avoid misclassifying top-level numeric section headings like
         // "1. Introduction" as lists. If the marker is purely numeric (e.g.,
         // "1.") at indent 0 and the next line is blank or an indented
