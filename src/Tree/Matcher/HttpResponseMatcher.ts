@@ -6,12 +6,14 @@ import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 
-// Matches HTTP responses either as a small paragraph or indented blocks, e.g.:
+// Matches HTTP responses rendered in RFC-like text. Examples:
 //   "   HTTP/1.1 302 Found"
 //   "   Location: https://..."
-// Or as two indented blocks (headers), blank line, indented block (body).
-// We keep it conservative by requiring a valid status line followed by at least
-// one header-like line.
+//   "           &continued=xyz"    (wrapped header value/URI continuation)
+// Or as an indented headers block, optional blank line, then an indented body block.
+// Be conservative: require a valid status line followed by at least one header-like line,
+// but allow subsequent continuation lines at the same-or-deeper indent even if they do not
+// individually match the header pattern (to capture wrapped header values).
 const statusLineRegex = /^\s*HTTP\/(?:\d(?:\.\d)?)\s+\d{3}\b.*$/;
 const headerLineRegex = /^\s*[A-Za-z0-9][A-Za-z0-9\-]*:\s?.*$/;
 
@@ -32,7 +34,7 @@ export const HttpResponseMatcher: BlockMatcher = {
     },
     parse: (context) => {
         const start = makePosition(context.cursor, 0);
-        const headerLines: string[] = [];
+        const lines: string[] = [];
 
         // Establish base indent (align with IndentedBlock's base behavior of min 4)
         const first = context.peek(0)!;
@@ -40,10 +42,11 @@ export const HttpResponseMatcher: BlockMatcher = {
         const base = Math.min(4, firstIndent);
 
         // Consume status line
-        headerLines.push(first);
+        lines.push(first);
         context.advance();
 
-        // Collect subsequent header lines, stop at blank line or page boundary or non-header
+        // Collect subsequent header and continuation lines at same-or-deeper indent.
+        // Stop at blank line, page boundary, or when indentation drops below base.
         while (!context.cursor.isEOL()) {
             const line = context.peek(0);
             if (line === null || isBlankLine(line)) {
@@ -52,10 +55,10 @@ export const HttpResponseMatcher: BlockMatcher = {
             if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
                 break;
             }
-            if (!headerLineRegex.test(line)) {
+            if (getIndentation(line) < base) {
                 break;
             }
-            headerLines.push(line);
+            lines.push(line);
             context.advance();
         }
 
@@ -85,7 +88,7 @@ export const HttpResponseMatcher: BlockMatcher = {
 
         return {
             type: "HttpResponse",
-            lines: headerLines,
+            lines,
             bodyLines,
             position: {start, end: makePosition(context.cursor, 0)}
         } as HttpResponseNode;
