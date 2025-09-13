@@ -14,27 +14,20 @@ fs.mkdirSync(outputDirectory, {recursive: true});
 
 async function main() {
     const rfcFile = path.join(rfcDirectory, 'rfc6749.txt');
+    const originalOutputFile = path.join(outputDirectory, 'rfc6749.original.txt');
     const outputFile = path.join(outputDirectory, 'rfc6749.txt');
+    const astFile = path.join(outputDirectory, 'rfc6749.json');
 
     const content = fs.readFileSync(rfcFile, 'utf-8');
     const lines = content.replace(/\r?\n/g, '\n').split('\n');
     const cursor = new ArrayCursor(lines);
-
     const ast = parse(cursor);
-
     const output = renderDocument(ast);
 
+    fs.writeFileSync(originalOutputFile, content);
+    fs.writeFileSync(astFile, JSON.stringify(ast, null, 2));
     fs.writeFileSync(outputFile, output.join('\n'));
 
-    console.dir(
-        ast.children.filter(item => item.type === 'List')
-        , {
-            depth: null,
-            maxArrayLength: 5000,
-            compact: true,
-        });
-
-    return;
     console.dir(ast, {
         depth: null,
         maxArrayLength: 5000,
