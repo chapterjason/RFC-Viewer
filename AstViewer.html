@@ -27,6 +27,8 @@
       --PageFooter: rgba(196, 132, 92, 0.22);
       --PageHeader: rgba(92, 152, 184, 0.22);
       --List: rgba(92, 178, 168, 0.22);
+      --DefinitionList: rgba(92, 168, 120, 0.22);
+      --TableOfContents: rgba(168, 120, 92, 0.22);
       --Document: rgba(255, 255, 255, 0.04);
 
       /* Sizing */
@@ -125,6 +127,9 @@
 
     /* Node block container to group multi-line nodes for unified outlines */
     .output .block { display: block; position: relative; }
+    .output .block .summary { display: none; color: var(--muted); padding-left: 8px; }
+    /* When collapsed, hide the entire block to focus only on checked types */
+    .output .block.collapsed { display: none; }
     .output .block.hover { outline: 1px solid #2d3b59; outline-offset: -1px; }
     .output .block.selected { outline: 2px solid var(--accent); outline-offset: -1px; }
 
@@ -155,6 +160,8 @@
     .output .block[data-type="PageFooter"] .type-badge { background: var(--PageFooter); }
     .output .block[data-type="PageHeader"] .type-badge { background: var(--PageHeader); }
     .output .block[data-type="List"] .type-badge { background: var(--List); }
+    .output .block[data-type="DefinitionList"] .type-badge { background: var(--DefinitionList); }
+    .output .block[data-type="TableOfContents"] .type-badge { background: var(--TableOfContents); }
     .output .block[data-type="Document"] .type-badge { background: var(--Document); }
 
     /* Highlight overlays via background on lines for the node’s type (gated by visibility classes) */
@@ -168,6 +175,8 @@
     .type-visible-PageFooter .output .line[data-type="PageFooter"] { background: var(--PageFooter); }
     .type-visible-PageHeader .output .line[data-type="PageHeader"] { background: var(--PageHeader); }
     .type-visible-List .output .line[data-type="List"] { background: var(--List); }
+    .type-visible-DefinitionList .output .line[data-type="DefinitionList"] { background: var(--DefinitionList); }
+    .type-visible-TableOfContents .output .line[data-type="TableOfContents"] { background: var(--TableOfContents); }
     .type-visible-Document .output .line[data-type="Document"] { background: var(--Document); }
 
     /* Hover and selection are now applied to .block containers */
@@ -262,6 +271,7 @@
     let nodeContainers = new Map(); // nodeId -> block container element
     let visibleTypes = new Set(); // which types are toggled visible
     let selectedNodeId = null;
+    let collapseAll = false;
     let isDragging = false;
     let containerRect = null;
     let minLeftPx = 740; // will be recomputed based on 72ch
@@ -269,7 +279,7 @@
     let currentLeft = null;
 
     const KNOWN_TYPES = [
-      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','BlankLine','PageHeader','PageFooter','PageBreak'
+      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','BlankLine','PageHeader','PageFooter','PageBreak'
     ];
     const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
 
@@ -322,6 +332,7 @@
         check.addEventListener('change', () => {
           if (check.checked) { visibleTypes.add(type); } else { visibleTypes.delete(type); }
           document.body.classList.toggle('type-visible-' + type, check.checked);
+          updateCollapseStates();
         });
         const label = document.createElement('span');
         label.textContent = type;
@@ -433,6 +444,7 @@
       }
       const containerEl = nodeContainers.get(nodeId);
       if (containerEl) { containerEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      updateCollapseStates();
     }
 
     function clearSelection() {
@@ -442,6 +454,7 @@
       selectedNodeId = null;
       nodeJsonEl.textContent = '(none)';
       selInfoEl.textContent = '';
+      updateCollapseStates();
     }
 
     function renderAst(ast) {
@@ -457,6 +470,39 @@
 
       // Depth-first render: for each child, render its lines and map lines back to the node
       let nodeSerial = 0;
+      function summarize(node, lines) {
+        try {
+          switch (node.type) {
+            case 'Document':
+              return `Document: ${node.children?.length ?? 0} blocks`;
+            case 'Title':
+            case 'SectionTitle':
+            case 'Paragraph':
+              return (lines[0] ?? '').trim() || node.type;
+            case 'IndentedBlock':
+              return `IndentedBlock: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
+            case 'List':
+              return `List: ${node.items?.length ?? 0} item${(node.items?.length ?? 0) !== 1 ? 's' : ''}`;
+            case 'DefinitionList':
+              return `DefinitionList: ${node.items?.length ?? 0} term${(node.items?.length ?? 0) !== 1 ? 's' : ''}`;
+            case 'TableOfContents':
+              return `TableOfContents: ${lines.length} entr${lines.length === 1 ? 'y' : 'ies'}`;
+            case 'PageHeader':
+              return `Header: ${(node.text ?? '').slice(0, 56)}`;
+            case 'PageFooter':
+              return `Footer: ${(node.text ?? '').slice(0, 56)}`;
+            case 'PageBreak':
+              return 'PageBreak';
+            case 'BlankLine':
+              return 'Blank line';
+            default:
+              return node.type;
+          }
+        } catch (_) {
+          return node.type || 'Unknown';
+        }
+      }
+
       function renderNodeWithMap(node) {
         const lines = renderNode(node);
         const nodeId = makeNodeId(node, nodeSerial++);
@@ -477,6 +523,8 @@
         badge.textContent = node.type || 'Unknown';
         block.appendChild(badge);
 
+        // No per-block toggles; collapse is global-only
+
         for (let index = 0; index < lines.length; index += 1) {
           const text = lines[index];
           const span = document.createElement('span');
@@ -494,6 +542,12 @@
           nodeLines.get(nodeId).push(span);
           totalLines += 1;
         }
+        // Summary (visible when collapsed)
+        const summaryEl = document.createElement('div');
+        summaryEl.className = 'summary';
+        summaryEl.textContent = summarize(node, lines);
+        block.appendChild(summaryEl);
+
         frag.appendChild(block);
       }
 
@@ -503,7 +557,16 @@
 
       outputEl.appendChild(frag);
       buildLegend(typesInUse);
+      updateCollapseStates();
       setStatus('Rendered ' + totalLines + ' lines.');
+    }
+
+    function updateCollapseStates() {
+      for (const [nodeId, block] of nodeContainers.entries()) {
+        const type = block.dataset.type || 'Unknown';
+        const expanded = visibleTypes.has(type);
+        block.classList.toggle('collapsed', !expanded);
+      }
     }
 
     function parseAndRender() {
