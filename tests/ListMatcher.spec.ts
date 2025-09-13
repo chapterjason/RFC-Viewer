@@ -86,8 +86,8 @@ describe('ListMatcher', () => {
     it('parses bracketed bullets like [TEXT]', () => {
         // Arrange
         const lines = [
-            '   [TOKEN] Token endpoint details',
-            '   [AUTHZ] Authorization endpoint details',
+            '   [TOKEN]  Token endpoint details',
+            '   [AUTHZ]  Authorization endpoint details',
         ];
         const context = createTestContext(lines);
 

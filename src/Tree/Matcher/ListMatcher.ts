@@ -76,19 +76,32 @@ function detectListMarker(line: string): ListMatch | null {
         };
     }
 
-    // Bracketed text: "[TEXT]" then optional spaces and optional content
-    m = line.match(/^(\s*)(\[[^\]]+\])(\s*)(\S.*)?$/);
+    // Bracketed text bullets: two cases
+    // 1) Marker + at least two spaces + content on the same line
+    m = line.match(/^(\s*)(\[[^\]]+\])(\s{2,})(\S.*)$/);
     if (m) {
         const leading = m[1] ?? '';
         const marker = m[2] ?? '';
         const spaces = m[3] ?? '';
-        const hasContent = (m[4] ?? '').length > 0;
         return {
             marker,
             markerLength: marker.length,
             contentIndent: leading.length + marker.length + spaces.length,
             leadingIndent: leading.length,
-            markerOnly: !hasContent && spaces.length === 0,
+            markerOnly: false,
+        };
+    }
+    // 2) Marker-only line with no content (allow trailing spaces only)
+    m = line.match(/^(\s*)(\[[^\]]+\])\s*$/);
+    if (m) {
+        const leading = m[1] ?? '';
+        const marker = m[2] ?? '';
+        return {
+            marker,
+            markerLength: marker.length,
+            contentIndent: leading.length + marker.length, // will be reset from next line
+            leadingIndent: leading.length,
+            markerOnly: true,
         };
     }
 
