@@ -10,8 +10,8 @@ describe('RenderList', () => {
     it('concatenates rendered items in order', () => {
         // Arrange
         const items: ListItemNode[] = [
-            {marker: '*', contentIndent: 3, lines: ['Alpha']},
-            {marker: '*', contentIndent: 3, lines: ['Beta', 'cont.']},
+            {marker: '*', contentIndent: 3, markerIndent: 0, lines: ['Alpha']},
+            {marker: '*', contentIndent: 3, markerIndent: 0, lines: ['Beta', 'cont.']},
         ];
         const node: ListNode = {type: 'List', position: makeRange(), items};
 
@@ -22,4 +22,3 @@ describe('RenderList', () => {
         expect(result).toEqual(['*  Alpha', '*  Beta', '   cont.']);
     });
 });
-

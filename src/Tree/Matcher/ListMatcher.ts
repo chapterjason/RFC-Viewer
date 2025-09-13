@@ -10,6 +10,7 @@ interface ListMatch {
     marker: string;
     markerLength: number;
     contentIndent: number;
+    leadingIndent: number;
 }
 
 function detectListMarker(line: string): ListMatch | null {
@@ -29,6 +30,7 @@ function detectListMarker(line: string): ListMatch | null {
             marker: 'o',
             markerLength: 1,
             contentIndent: leading.length + 1 + spaces.length,
+            leadingIndent: leading.length,
         };
     }
 
@@ -41,6 +43,7 @@ function detectListMarker(line: string): ListMatch | null {
             marker: '*',
             markerLength: 1,
             contentIndent: leading.length + 1 + spaces.length,
+            leadingIndent: leading.length,
         };
     }
 
@@ -54,6 +57,7 @@ function detectListMarker(line: string): ListMatch | null {
             marker,
             markerLength: marker.length,
             contentIndent: leading.length + marker.length + spaces.length,
+            leadingIndent: leading.length,
         };
     }
 
@@ -67,6 +71,7 @@ function detectListMarker(line: string): ListMatch | null {
             marker,
             markerLength: marker.length,
             contentIndent: leading.length + marker.length + spaces.length,
+            leadingIndent: leading.length,
         };
     }
 
@@ -80,6 +85,7 @@ function detectListMarker(line: string): ListMatch | null {
             marker,
             markerLength: marker.length,
             contentIndent: leading.length + marker.length + spaces.length,
+            leadingIndent: leading.length,
         };
     }
 
@@ -145,6 +151,7 @@ export const ListMatcher: BlockMatcher = {
             const item: ListItemNode = {
                 marker: match.marker,
                 contentIndent: match.contentIndent,
+                markerIndent: match.leadingIndent,
                 lines: [],
             };
             // Push the first content line (after marker and required spaces)
@@ -185,4 +192,3 @@ export const ListMatcher: BlockMatcher = {
         } as ListNode;
     },
 };
-

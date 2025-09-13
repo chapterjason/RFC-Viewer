@@ -8,6 +8,7 @@ describe('RenderListItem', () => {
         const item: ListItemNode = {
             marker: '*',
             contentIndent: 3,
+            markerIndent: 0,
             lines: ['First point starts here', 'continues on the next line.'],
         };
 
@@ -24,6 +25,7 @@ describe('RenderListItem', () => {
         const item: ListItemNode = {
             marker: '1.',
             contentIndent: 4,
+            markerIndent: 0,
             lines: ['First numbered', ''],
         };
 
@@ -34,4 +36,3 @@ describe('RenderListItem', () => {
         expect(result).toEqual(['1.  First numbered', '']);
     });
 });
-
