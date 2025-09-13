@@ -236,13 +236,42 @@ export const ListMatcher: BlockMatcher = {
             }
 
             // Read continuation lines for this item
+            // Support multiple paragraphs within a single list item separated by blank lines.
+            let previousWasBlank = false;
+            let paragraphIndent: number | null = null;
             while (!context.cursor.isEOL()) {
                 const continuation = context.peek(0);
                 if (continuation === null) {
                     break;
                 }
                 if (isBlankLine(continuation)) {
-                    break;
+                    // Look ahead: if the next non-blank line is a new aligned list item,
+                    // or is less indented than our item's base/content, end the item.
+                    // Otherwise, treat this as a paragraph break within the item.
+                    let k = 1;
+                    let nextNonBlank: string | null = null;
+                    while (true) {
+                        const look = context.peek(k);
+                        if (look === null) { break; }
+                        if (!isBlankLine(look)) { nextNonBlank = look; break; }
+                        k += 1;
+                    }
+                    if (nextNonBlank === null) {
+                        break;
+                    }
+                    const nm = detectListMarker(nextNonBlank);
+                    // If the next non-blank begins with any list marker, end this item/list here
+                    // so that a new list (possibly different style/indent) can start after the blank.
+                    if (nm) {
+                        break;
+                    }
+                    // Accept a paragraph break if the next paragraph is at least as indented
+                    // as the item's base/content indentation.
+                    previousWasBlank = true;
+                    paragraphIndent = null;
+                    item.lines.push("");
+                    context.advance();
+                    continue;
                 }
                 if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
                     break;
@@ -252,9 +281,26 @@ export const ListMatcher: BlockMatcher = {
                     break;
                 }
 
-                if (getIndentation(continuation) >= item.contentIndent) {
+                const contIndent = getIndentation(continuation);
+                // If we are in a normal wrapped continuation, require content indent.
+                if (contIndent >= item.contentIndent) {
                     item.lines.push(sliceLineText(continuation, item.contentIndent));
                     context.advance();
+                    previousWasBlank = false;
+                    continue;
+                }
+                // After a blank line within the item, allow the next paragraph to start
+                // at a slightly smaller indent (e.g., RFC styles), and keep consuming
+                // lines at that indent as part of the paragraph.
+                const baseForItem = listBaseIndent ?? item.contentIndent;
+                if ((previousWasBlank || paragraphIndent !== null) && contIndent >= Math.min(baseForItem, item.contentIndent)) {
+                    if (paragraphIndent === null) {
+                        paragraphIndent = contIndent;
+                    }
+                    const sliceAt = Math.min(paragraphIndent, contIndent);
+                    item.lines.push(sliceLineText(continuation, sliceAt));
+                    context.advance();
+                    previousWasBlank = false;
                     continue;
                 }
                 break;
