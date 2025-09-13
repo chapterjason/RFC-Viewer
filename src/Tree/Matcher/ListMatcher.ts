@@ -104,7 +104,32 @@ export const ListMatcher: BlockMatcher = {
         if (line === null || isBlankLine(line)) {
             return false;
         }
-        return detectListMarker(line) !== null;
+        const match = detectListMarker(line);
+        if (!match) {
+            return false;
+        }
+        // Avoid misclassifying top-level numeric section headings like
+        // "1. Introduction" as lists. If the marker is purely numeric (e.g.,
+        // "1.") at indent 0 and the next line is blank or an indented
+        // continuation (not another list item), prefer letting SectionTitle
+        // handle it by returning false here.
+        const isPureNumericMarker = /^\d+\.$/.test(match.marker);
+        if (isPureNumericMarker && match.leadingIndent === 0) {
+            const next = context.peek(1);
+            if (next === null || isBlankLine(next)) {
+                return false;
+            }
+            // If the next line is indented and not a new list marker, treat as
+            // a wrapped section title rather than a list.
+            const nextIsList = detectListMarker(next) !== null;
+            if (!nextIsList) {
+                const nextIndent = getIndentation(next);
+                if (nextIndent > 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     },
     parse: (context) => {
         const start = makePosition(context.cursor, 0);
