@@ -1,3 +1,5 @@
+import type {Constructable} from "./Constructable.js";
+
 export class ArrayCursor<T> {
     constructor(private items: T[], private index: number = 0) {
     }
@@ -20,8 +22,9 @@ export class ArrayCursor<T> {
             throw new Error("Start of cursor");
         }
 
-        // @ts-ignore We ensure that by checking index
-        return this.items[this.index--];
+        this.index -= 1;
+        // @ts-ignore We ensure that by checking the index above
+        return this.items[this.index];
     }
 
     hasPrev(): boolean {
@@ -37,6 +40,9 @@ export class ArrayCursor<T> {
     }
 
     current(): T {
+        if (this.index < 0) {
+            throw new Error("Index out of bounds");
+        }
         if (this.isEOL()) {
             throw new Error("End of cursor");
         }
@@ -63,13 +69,12 @@ export class ArrayCursor<T> {
 
     peek(offset = 0): T | null {
         const desiredIndex = this.index + offset;
-
-        if (desiredIndex) {
+        if (desiredIndex < 0 || desiredIndex >= this.items.length) {
             return null;
         }
 
-        // @ts-ignore We ensure that by checking the desiredIndex
-        return this.items[this.index + offset];
+        // @ts-ignore bounds are checked above
+        return this.items[desiredIndex];
     }
 
     readWhile(predicate: (item: T) => boolean): ArrayCursor<T> {
@@ -87,7 +92,7 @@ export class ArrayCursor<T> {
         const result = [];
 
         for (let i = 0; i < amount; i++) {
-            const next = this.peek(i);
+            const next = this.peek();
 
             if (next === null) {
                 return new ArrayCursor(result);
@@ -100,7 +105,11 @@ export class ArrayCursor<T> {
     }
 
     skip(amount: number = 1) {
-        this.index += amount;
+        const newIndex = this.index + amount;
+        if (newIndex < 0 || newIndex > this.items.length) {
+            throw new Error("Index out of bounds");
+        }
+        this.index = newIndex;
     }
 
     slice(start: number = 0, end: number = this.items.length): ArrayCursor<T> {
@@ -117,6 +126,9 @@ export class ArrayCursor<T> {
     }
 
     setIndex(index: number) {
+        if (index < 0 || index > this.items.length) {
+            throw new Error("Index out of bounds");
+        }
         this.index = index;
     }
 
@@ -132,7 +144,7 @@ export class ArrayCursor<T> {
         return {
             next: () => {
                 if (this.isEOL()) {
-                    return {done: true, value: undefined};
+                    return {done: true, value: ""};
                 }
 
                 return {done: false, value: this.next()};
@@ -152,7 +164,7 @@ export class ArrayCursor<T> {
         return this.items.every(predicate);
     }
 
-    instanceOf(type: ObjectConstructor): boolean {
+    instanceOf(type: Constructable): boolean {
         return this.validate(item => item instanceof type);
     }
 
@@ -160,7 +172,7 @@ export class ArrayCursor<T> {
         return this.items.includes(value);
     }
 
-    includesInstanceOf(type: ObjectConstructor): boolean {
+    includesInstanceOf(type: Constructable): boolean {
         return this.items.some(item => item instanceof type);
     }
 
