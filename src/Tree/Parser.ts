@@ -9,6 +9,7 @@ import {ParagraphMatcher} from "./Matcher/ParagraphMatcher.js";
 import {BlankLineMatcher} from "./Matcher/BlankLineMatcher.js";
 import {MetadataMatcher} from "./Matcher/MetadataMatcher.js";
 import {TitleMatcher} from "./Matcher/TitleMatcher.js";
+import {SectionTitleMatcher} from "./Matcher/SectionTitleMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
@@ -57,6 +58,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         MetadataMatcher,
         BlankLineMatcher,
         TitleMatcher,
+        SectionTitleMatcher,
         IndentedBlockMatcher,
         ParagraphMatcher,
     ];

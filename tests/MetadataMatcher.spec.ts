@@ -32,6 +32,9 @@ describe('MetadataMatcher', () => {
         const sut = MetadataMatcher;
 
         // Act: test then parse
+        // Move to the first non-blank content line (skip leading blanks)
+        context.advance();
+        context.advance();
         const canMatch = sut.test(context);
         expect(canMatch).toBe(true);
         const node: any = sut.parse(context);
@@ -47,7 +50,8 @@ describe('MetadataMatcher', () => {
     it('does not match after metadata has been seen', () => {
         // Arrange: metadata already parsed
         const inputLines = [
-            'Header line',
+            'Internet Engineering Task Force (IETF)                     D. Hardt, Ed.',
+            'Request for Comments: 6749                                     Microsoft',
             '',
             'Other content',
         ];
@@ -62,4 +66,3 @@ describe('MetadataMatcher', () => {
         expect(sut.test(context)).toBe(false);
     });
 });
-

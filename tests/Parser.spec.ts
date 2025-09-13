@@ -6,15 +6,15 @@ describe('parse using RFC-like snippets with context', () => {
     it('parses an indented HTTP request block (RFC 6749) with surrounding context', () => {
         // Arrange: RFC-like example with preface/blank lines/indented block/postface
         const snippetWithContext = [
-            'Preface text about the upcoming example.',
-            'Additional details continue here.',
+            '   Preface text about the upcoming example.',
+            '   Additional details continue here.',
             '',
             '    GET /authorize?response_type=code&client_id=s6BhdRkqt3&state=xyz',
             '        &redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1',
             '    Host: server.example.com',
             '',
-            'Postface explanation of what the example demonstrates.',
-            'Final remark after the example.',
+            '   Postface explanation of what the example demonstrates.',
+            '   Final remark after the example.',
         ];
         // Act: parse into a Document AST
         const actualValue = parse(new ArrayCursor(snippetWithContext));
@@ -48,14 +48,14 @@ describe('parse using RFC-like snippets with context', () => {
             '1. Introduction ....................................................4',
             '  1.1. Roles ......................................................6',
             '',
-            'Some narrative text after the table of contents.',
+            '   Some narrative text after the table of contents.',
         ];
         // Act: parse into a Document AST
         const actualValue = parse(new ArrayCursor(snippetWithContext));
         // Assert: block kinds and grouping of ToC paragraph
         const expectedValue = [
             'BlankLine',
-            'Paragraph',
+            'SectionTitle',
             'BlankLine',
             'Paragraph',
             'BlankLine',

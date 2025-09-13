@@ -15,7 +15,7 @@ describe('Header integration', () => {
             '',
             'Abstract',
             '',
-            'Some text after the abstract.',
+            '   Some text after the abstract.',
         ];
 
         // Act: parse into a Document AST
@@ -28,7 +28,7 @@ describe('Header integration', () => {
             'BlankLine',
             'Title',
             'BlankLine',
-            'Paragraph',
+            'SectionTitle',
             'BlankLine',
             'Paragraph',
         ];
@@ -42,4 +42,3 @@ describe('Header integration', () => {
         expect(title.lines[0].trim()).toBe('The OAuth 2.0 Authorization Framework');
     });
 });
-

@@ -11,21 +11,40 @@ export const MetadataMatcher: BlockMatcher = {
         if (seenMetadata) {
             return false;
         }
-        const line = context.peek(0);
-        if (line === null) {
-            return false;
-        }
-        // Match only at the beginning of document content (allowing leading blank lines)
-        if (isBlankLine(line)) {
-            return false;
-        }
+        // Only at document start (no prior non-blank content)
         const consumedLines = context.cursor.consumed().toArray();
         const sawNonBlankBefore = consumedLines.some((previousLine: string) => !isBlankLine(previousLine));
-        return !sawNonBlankBefore;
+        if (sawNonBlankBefore) {
+            return false;
+        }
+        const line = context.peek(0);
+        if (line === null || isBlankLine(line)) {
+            // Do not consume blanks here; let BlankLineMatcher handle them
+            return false;
+        }
+        const s = line.trim();
+        // Heuristic: RFC metadata usually contains these markers
+        return (
+            s.includes('Internet Engineering Task Force') ||
+            s.startsWith('Request for Comments:') ||
+            s.startsWith('Category:')
+        );
     },
     parse: (context) => {
         const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
+        // Skip leading blanks at the very top of the document
+        while (!context.cursor.isEOL()) {
+            const current = context.peek(0);
+            if (current === null) {
+                break;
+            }
+            if (!isBlankLine(current)) {
+                break;
+            }
+            context.advance();
+        }
+        // Capture metadata block until the next blank line
         while (!context.cursor.isEOL()) {
             const current = context.peek(0);
             if (current === null) {
