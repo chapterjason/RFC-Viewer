@@ -63,7 +63,11 @@
       background: var(--panel);
     }
     header h1 { font-size: 14px; margin: 0; font-weight: 600; letter-spacing: 0.3px; }
-    header .actions { margin-left: auto; display: flex; gap: 8px; }
+    header .left-tools { display: flex; align-items: center; gap: 8px; margin-left: 12px; }
+    header .toolbar { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    header .toolbar .tool-group { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+    header .toolbar .tool-group button { flex: 0 0 auto; }
+    header .toolbar .tool-group + .tool-group { border-left: 1px solid var(--border); padding-left: 10px; }
     button, .btn {
       background: #1b2331;
       color: var(--text);
@@ -72,6 +76,21 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 12px;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: 0.6; cursor: default; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    /* Loading indicator in buttons */
+    button.loading::before, .btn.loading::before {
+      content: '';
+      display: inline-block;
+      width: 10px; height: 10px;
+      margin-right: 6px;
+      border: 2px solid #2b3445;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: -1px;
     }
     /* Ensure all UI controls render in monospace */
     button, .btn, input, select, textarea, label { font-family: inherit; font-variant-ligatures: none; }
@@ -98,7 +117,7 @@
     .panel .body { flex: 1; min-height: 0; }
 
     .input-wrap { display: grid; grid-template-rows: auto 1fr; height: 100%; }
-    .input-controls { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .input-controls { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
     textarea {
       width: 100%; height: 100%; box-sizing: border-box; resize: none; outline: none;
       border: 1px solid var(--border); background: #0c111b; color: var(--text);
@@ -117,19 +136,50 @@
     .legend .swatch { width: 12px; height: 12px; border-radius: 3px; outline: 1px solid var(--border); }
     .legend .item input { margin: 0; }
 
+    /* Types popover for scalable type toggles */
+    .types-popover {
+      position: absolute;
+      z-index: 20;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      min-width: 260px;
+      max-width: 520px;
+      max-height: 60vh;
+      overflow: hidden;
+      display: none;
+    }
+    .types-popover.open { display: block; }
+    .types-popover header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #0f1320; border-bottom: 1px solid var(--border); }
+    .types-popover header .title { font-size: 12px; font-weight: 600; }
+    .types-popover .controls { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .types-popover .controls .spacer { flex: 1 1 auto; }
+    .types-popover .filter { width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: #0c111b; color: var(--text); font-family: inherit; font-size: 12px; }
+    .types-popover .list { padding: 8px 10px; overflow: auto; max-height: 44vh; display: grid; grid-template-columns: 1fr; gap: 6px; }
+    .types-popover .list .item { display: flex; align-items: center; gap: 6px; }
+    .types-popover .list .item .swatch { width: 12px; height: 12px; border-radius: 3px; outline: 1px solid var(--border); }
+    .types-popover .footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); }
+  
     .layout, .panel { min-height: 0; }
-    .render-area { position: relative; height: 100%; overflow: auto; }
+    .render-area { position: relative; height: 100%; overflow: auto; contain: paint; }
     .output {
       position: relative; margin: 0; padding: 8px 12px; background: transparent;
       border: none; color: var(--text); white-space: pre; line-height: 1.6; font-size: var(--code-size);
       font-family: Consolas, monospace;
       font-variant-ligatures: none;
     }
-    .output .line { display: block; padding: 0 6px; }
+    /* Line with fixed-width number gutter and content */
+    .output .line { display: grid; grid-template-columns: var(--ln-width, 4ch) 1fr; align-items: baseline; }
+    .output .line .ln { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 8px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
+    .output .line .content { display: inline-block; padding: 0 6px; }
     .output .line::selection { background: rgba(122, 162, 247, 0.35); }
-    /* Muted styling for visible whitespace markers */
-    .output .line .ws { color: var(--muted); opacity: 0.7; }
-    .output .line .ws.ws-tab { letter-spacing: 0; }
+    /* Visible whitespace markers: overlay via ::before so actual whitespace remains copyable */
+    .output .line .ws { position: relative; display: inline-block; color: var(--muted); opacity: 0.7; }
+    .output .line .ws::before { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; color: var(--muted); opacity: 0.7; pointer-events: none; font-size: 8px; line-height: 1; }
+    .output .line .ws.ws-space::before { content: '·'; font-size: 12px; }
+    .output .line .ws.ws-tab::before { content: '⇥'; }
     /* Ensure blank lines occupy vertical space without inserting spaces */
     .output .line:empty::before { content: "\200B"; }
     /* Visualize page breaks explicitly */
@@ -143,13 +193,16 @@
       border: 1px solid var(--border);
       border-radius: 0;
       margin: 2px 0;
+      /* Hint to the browser that outline may change on hover/selection */
+      will-change: outline;
     }
     /* Make labels non-selectable so they don't end up in clipboard */
     .output .block .type-badge { user-select: none; -webkit-user-select: none; -moz-user-select: none; pointer-events: none; }
     .output .block .summary { display: none; color: var(--muted); padding-left: 8px; }
     /* When collapsed, hide the entire block to focus only on checked types */
     .output .block.collapsed { display: none; }
-    .output .block.hover { outline: 1px solid #2d3b59; outline-offset: -1px; }
+    /* Hover uses pure CSS to avoid JS-induced lag */
+    .output .block:hover { outline: 1px solid #2d3b59; outline-offset: -1px; }
     .output .block.selected { outline: 2px solid var(--accent); outline-offset: -1px; }
 
     /* Small type label at top-right of each block */
@@ -199,34 +252,61 @@
     .details pre { margin: 0; padding: 12px; white-space: pre; font-size: 12px; line-height: 1.45; }
 
     .status { font-size: 12px; color: var(--muted); padding: 8px 12px; border-top: 1px solid var(--border); }
+    .status.loading::before {
+      content: '';
+      display: inline-block;
+      width: 10px; height: 10px;
+      margin-right: 8px;
+      border: 2px solid #2b3445;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: -1px;
+    }
     .error { color: var(--danger); }
+
+    /* Modal backdrop for JSON dialog */
+    dialog::backdrop { background: rgba(5, 8, 15, 0.6); }
+
+    /* Activity log styles */
+    .log { border-top: 1px solid var(--border); }
+    .log summary { list-style: none; cursor: pointer; padding: 6px 12px; color: var(--muted); background: #0f1320; user-select: none; }
+    .log summary::marker { display: none; }
+    .log pre { margin: 0; padding: 8px 12px; font-size: 12px; line-height: 1.45; color: var(--muted); max-height: 200px; overflow: auto; white-space: pre; }
   </style>
 </head>
 <body>
   <div class="app" style="grid-template-rows: auto auto 1fr auto; height: 100vh;">
-    <header style="gap: 16px; align-items: flex-start;">
+    <header style="gap: 16px; align-items: center;">
       <h1>AST Text Renderer & Inspector</h1>
-      <div class="actions" style="align-items: center; gap: 10px; margin-left: auto;">
-        <button id="btnRender">Render</button>
-        <button id="btnSample" title="Insert a small sample AST">Sample</button>
-        <button id="btnClear">Clear</button>
+      <div class="left-tools">
+        <button id="btnTypes" title="Show/hide node types">Filter</button>
       </div>
-      <div style="display:flex; flex-direction: column; gap: 4px; width: min(900px, 55vw); min-width: 300px;">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span class="muted">AST JSON</span>
-          <small class="muted">Document node expected</small>
+      <div class="toolbar">
+        <!-- Source: URL first for common case -->
+        <div class="tool-group" style="flex: 1 1 auto; min-width: 360px;">
+          <input id="urlInput" type="url" placeholder="https://www.rfc-editor.org/rfc/rfc6749.txt" value="https://www.rfc-editor.org/rfc/rfc6749.txt" style="flex: 2 1 640px; min-width: 360px; max-width: 70vw; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: #0c111b; color: var(--text);" />
+          <button id="btnFetchUrl" title="Fetch URL and parse as RFC text">From URL</button>
         </div>
-        <div class="input-controls" style="gap: 6px;">
-          <button id="btnOpenFile" title="Select a local file (.txt or .json)">Open File</button>
+        <!-- Source: local file -->
+        <div class="tool-group">
+          <button id="btnOpenFile" title="Select a local file (.txt or .json)">From File</button>
           <input id="fileInput" type="file" accept=".txt,.json,text/plain,application/json" style="display:none" />
-          <input id="urlInput" type="url" placeholder="https://www.rfc-editor.org/rfc/rfc6749.txt" value="https://www.rfc-editor.org/rfc/rfc6749.txt" style="flex: 1 1 420px; min-width: 180px; max-width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: #0c111b; color: var(--text);" />
-          <button id="btnFetchUrl" title="Fetch URL and parse as RFC text">Fetch URL</button>
         </div>
-        <textarea id="input" rows="2" placeholder='{"type":"Document","children":[...]}'></textarea>
+        <!-- Source: JSON and Clipboard -->
+        <div class="tool-group">
+          <button id="btnOpenJsonDialog" title="Open JSON input form">From JSON</button>
+          <button id="btnFromClipboard" title="Read text from clipboard and parse">From Clipboard</button>
+        </div>
+        <!-- Utilities -->
+        <div class="tool-group">
+          <button id="btnSample" title="Insert a small sample AST">Load Sample</button>
+          <button id="btnClear">Clear</button>
+        </div>
       </div>
     </header>
 
-    <div class="legend" id="legend" style="border-top: 1px solid var(--border);"></div>
+    <div class="legend" id="legend" style="display:none"></div>
 
     <div class="layout" id="mainLayout" style="height: 100%; min-height: 0;">
       <div class="panel render-panel" style="border-right: 1px solid var(--border); min-height: 0;">
@@ -238,7 +318,7 @@
       <div class="panel" style="min-height: 0;">
         <div class="details">
           <div class="header">
-            <span class="title">Selected Node</span>
+            <span class="title">Selected Node(s)</span>
             <span id="selInfo" class="muted"></span>
             <div style="margin-left: auto; display:flex; gap: 8px;">
               <button id="btnClearSelection">Clear Selection</button>
@@ -250,7 +330,47 @@
     </div>
 
     <div class="status" id="status"></div>
+    <details id="logPanel" class="log">
+      <summary>Activity Log</summary>
+      <pre id="statusLog"></pre>
+    </details>
   </div>
+
+  <!-- Types Popover (scalable alternative to checkbox row) -->
+  <div id="typesPopover" class="types-popover" role="dialog" aria-label="Node Types" aria-modal="false">
+    <header><span class="title">Node Types</span></header>
+    <div class="controls">
+      <button id="btnTypesAll" class="btn">All</button>
+      <button id="btnTypesNone" class="btn">None</button>
+      <span class="spacer"></span>
+      <label class="item" style="display:flex; align-items:center; gap:6px;">
+        <input id="chkShowWhitespace" type="checkbox" />
+        <span>Show whitespace</span>
+      </label>
+    </div>
+    <div style="padding: 8px 10px;">
+      <input id="typesFilter" class="filter" placeholder="Filter types" />
+    </div>
+    <div id="typesList" class="list"></div>
+  </div>
+
+  <!-- JSON Input Dialog -->
+  <dialog id="jsonDialog" style="border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 0; border-radius: 8px; width: min(960px, 92vw);">
+    <form method="dialog" style="display:flex; flex-direction: column; max-height: 80vh;">
+      <header style="display:flex; align-items:center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #0f1320;">
+        <strong style="font-size: 12px;">Paste JSON AST</strong>
+        <small class="muted">Paste a Document node</small>
+      </header>
+      <div style="padding: 8px 12px; display:flex; flex-direction: column; gap: 8px;">
+        <label for="input" class="muted">AST JSON</label>
+        <textarea id="input" rows="12" placeholder='{"type":"Document","children":[...]}' style="width: 100%; box-sizing: border-box; resize: vertical; outline: none; border: 1px solid var(--border); background: #0c111b; color: var(--text); padding: 12px; font-size: var(--code-size); line-height: 1.6; border-radius: 8px; tab-size: 4;"></textarea>
+      </div>
+      <footer style="display:flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); background: #0f1320;">
+        <button value="cancel">Cancel</button>
+        <button id="btnDialogLoad" value="default">Load</button>
+      </footer>
+    </form>
+  </dialog>
 
   <script type="module">
     import { renderNode } from './dist/Tree/Render/RenderNode.js';
@@ -261,11 +381,18 @@
     const inputEl = document.getElementById('input');
     const outputEl = document.getElementById('output');
     const statusEl = document.getElementById('status');
-    const legendEl = document.getElementById('legend');
+    const logPanelEl = document.getElementById('logPanel');
+    const statusLogEl = document.getElementById('statusLog');
+    const typesPopover = document.getElementById('typesPopover');
+    const typesListEl = document.getElementById('typesList');
+    const btnTypes = document.getElementById('btnTypes');
+    const btnTypesAll = document.getElementById('btnTypesAll');
+    const btnTypesNone = document.getElementById('btnTypesNone');
+    const typesFilterEl = document.getElementById('typesFilter');
+    const chkShowWhitespace = document.getElementById('chkShowWhitespace');
     const nodeJsonEl = document.getElementById('nodeJson');
     const selInfoEl = document.getElementById('selInfo');
 
-    const btnRender = document.getElementById('btnRender');
     const btnSample = document.getElementById('btnSample');
     const btnClear = document.getElementById('btnClear');
     const btnClearSelection = document.getElementById('btnClearSelection');
@@ -274,14 +401,22 @@
     const btnOpenFile = document.getElementById('btnOpenFile');
     const fileInput = document.getElementById('fileInput');
     const layoutEl = document.getElementById('mainLayout');
+    const renderAreaEl = document.getElementById('renderArea');
     const splitterEl = document.getElementById('splitter');
+    const btnFromClipboard = document.getElementById('btnFromClipboard');
+    const btnOpenJsonDialog = document.getElementById('btnOpenJsonDialog');
+    const jsonDialog = document.getElementById('jsonDialog');
+    const btnDialogLoad = document.getElementById('btnDialogLoad');
 
     let currentAst = null;
     let nodeMap = new Map(); // nodeId -> node
     let nodeLines = new Map(); // nodeId -> array of line elements
     let nodeContainers = new Map(); // nodeId -> block container element
+    let nodeOrder = []; // nodeIds in render order
+    let nodeIndex = new Map(); // nodeId -> index in nodeOrder
     let visibleTypes = new Set(); // which types are toggled visible
-    let selectedNodeId = null;
+    let selectedNodeIds = new Set();
+    let selectionAnchorId = null; // last anchor for Shift+Click range
     let collapseAll = false;
     let showWhitespace = true; // whether to visualize spaces and tabs
     let isDragging = false;
@@ -295,9 +430,65 @@
     ];
     const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
 
-    function setStatus(text, isError=false) {
+    // Lightweight activity log for status changes and durations
+    const statusLog = [];
+    let activeOperation = null; // { text, startedAtMs, startedIso }
+    const MAX_LOG_LINES = 400;
+
+    function pad2(n) { return n.toString().padStart(2, '0'); }
+    function formatClock(date) {
+      const hh = pad2(date.getHours());
+      const mm = pad2(date.getMinutes());
+      const ss = pad2(date.getSeconds());
+      const ms = date.getMilliseconds().toString().padStart(3, '0');
+      return `${hh}:${mm}:${ss}.${ms}`;
+    }
+    function appendLogLine(line) {
+      // Maintain an in-memory list and update the UI efficiently
+      statusLog.push(line);
+      if (statusLog.length > MAX_LOG_LINES) { statusLog.shift(); }
+      statusLogEl.textContent = statusLog.join('\n');
+      // Auto-scroll to bottom when open
+      if (logPanelEl.open) { statusLogEl.scrollTop = statusLogEl.scrollHeight; }
+    }
+    function recordStatus(text, isError, isLoading) {
+      const nowDate = new Date();
+      const nowClock = formatClock(nowDate);
+      const nowMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const label = (text || '').trim();
+
+      // Start of an operation
+      if (isLoading) {
+        if (activeOperation != null) {
+          // Implicitly complete the previous operation before starting the next stage
+          const elapsedMs = Math.max(0, Math.round(nowMs - activeOperation.startedAtMs));
+          appendLogLine(`[${nowClock}] ✔ Done: "${activeOperation.text}" in ${elapsedMs} ms`);
+        }
+        activeOperation = { text: label || '(loading)', startedAtMs: nowMs, startedIso: nowDate.toISOString() };
+        appendLogLine(`[${nowClock}] ▶ Start: "${activeOperation.text}"`);
+        return;
+      }
+
+      // End of an operation (success or error), if any
+      if (activeOperation != null) {
+        const elapsedMs = Math.max(0, Math.round(nowMs - activeOperation.startedAtMs));
+        const outcome = isError ? '✖ Error' : '✔ Done';
+        const endLabel = label && label !== activeOperation.text ? ` → ${label}` : '';
+        appendLogLine(`[${nowClock}] ${outcome}: "${activeOperation.text}"${endLabel} in ${elapsedMs} ms`);
+        activeOperation = null;
+        return;
+      }
+
+      // Plain status change (no active operation)
+      const prefix = isError ? '!' : '•';
+      appendLogLine(`[${nowClock}] ${prefix} ${label}`);
+    }
+
+    function setStatus(text, isError=false, isLoading=false) {
       statusEl.textContent = text || '';
       statusEl.classList.toggle('error', !!isError);
+      statusEl.classList.toggle('loading', !!isLoading);
+      recordStatus(text || '', !!isError, !!isLoading);
     }
 
     function escapeHtml(s) {
@@ -306,11 +497,14 @@
 
     function clearRender() {
       outputEl.innerHTML = '';
-      legendEl.innerHTML = '';
+      typesListEl.innerHTML = '';
       nodeMap.clear();
       nodeLines.clear();
       nodeContainers.clear();
-      selectedNodeId = null;
+      nodeOrder = [];
+      nodeIndex.clear();
+      selectedNodeIds.clear();
+      selectionAnchorId = null;
       nodeJsonEl.textContent = '(none)';
       selInfoEl.textContent = '';
     }
@@ -322,23 +516,8 @@
     }
 
     function buildLegend(typesInUse) {
-      legendEl.innerHTML = '';
-      const frag = document.createDocumentFragment();
-
-      // Global controls
-      const wsItem = document.createElement('label');
-      wsItem.className = 'item';
-      const wsCheck = document.createElement('input');
-      wsCheck.type = 'checkbox';
-      wsCheck.checked = showWhitespace;
-      const wsLabel = document.createElement('span');
-      wsLabel.textContent = 'Show whitespace';
-      wsItem.append(wsCheck, wsLabel);
-      wsCheck.addEventListener('change', () => {
-        showWhitespace = wsCheck.checked;
-        applyWhitespaceVisibility();
-      });
-      frag.appendChild(wsItem);
+      // Global controls are in the popover header; keep checkbox state in sync
+      chkShowWhitespace.checked = showWhitespace;
 
       // Enable present types by default
       visibleTypes = new Set(typesInUse);
@@ -350,27 +529,28 @@
         if (!typesInUse.has(type)) { continue; }
         const item = document.createElement('label');
         item.className = 'item';
-        const swatch = document.createElement('span');
-        swatch.className = 'swatch';
-        swatch.style.background = getComputedStyle(document.documentElement).getPropertyValue('--' + type) || '#333';
+        item.dataset.type = type;
         const check = document.createElement('input');
         check.type = 'checkbox';
         check.checked = true;
+        const swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        swatch.style.background = getComputedStyle(document.documentElement).getPropertyValue('--' + type) || '#333';
+        const label = document.createElement('span');
+        label.textContent = type;
         check.addEventListener('change', () => {
           if (check.checked) { visibleTypes.add(type); } else { visibleTypes.delete(type); }
           document.body.classList.toggle('type-visible-' + type, check.checked);
           updateCollapseStates();
+          ensureSelectedVisible(true);
         });
-        const label = document.createElement('span');
-        label.textContent = type;
         item.append(check, swatch, label);
-        frag.appendChild(item);
+        typesListEl.appendChild(item);
       }
-      legendEl.appendChild(frag);
     }
 
     function renderWhitespaceSpans(target, raw) {
-      // Render raw text into target span with visible markers for spaces/tabs
+      // Render raw text into target span with visible markers overlaid via CSS
       target.textContent = '';
       let buffer = '';
       function flushBuffer() {
@@ -382,13 +562,13 @@
           flushBuffer();
           const mark = document.createElement('span');
           mark.className = 'ws ws-space';
-          mark.textContent = '·';
+          mark.textContent = ' ';
           target.appendChild(mark);
         } else if (ch === '\t') {
           flushBuffer();
           const mark = document.createElement('span');
           mark.className = 'ws ws-tab';
-          mark.textContent = '⇥';
+          mark.textContent = '\t';
           target.appendChild(mark);
         } else {
           buffer += ch;
@@ -398,11 +578,66 @@
     }
 
     function applyWhitespaceVisibility() {
-      const lines = outputEl.querySelectorAll('.line');
-      for (const span of lines) {
-        if (span.classList.contains('page-break')) { continue; }
-        const raw = span.dataset.raw ?? '';
-        if (showWhitespace) { renderWhitespaceSpans(span, raw); } else { span.textContent = raw; }
+      const contents = outputEl.querySelectorAll('.line .content');
+      for (const content of contents) {
+        const line = content.closest('.line');
+        if (line && line.classList.contains('page-break')) { continue; }
+        const raw = content.dataset.raw ?? '';
+        if (showWhitespace) { renderWhitespaceSpans(content, raw); } else { content.textContent = raw; }
+      }
+    }
+
+    // Schedule whitespace rendering to avoid blocking initial paint
+    function scheduleWhitespaceRender() {
+      const runner = () => applyWhitespaceVisibility();
+      const ric = (window && (window.requestIdleCallback || null));
+      if (typeof ric === 'function') {
+        ric(runner, { timeout: 250 });
+      } else {
+        setTimeout(runner, 0);
+      }
+    }
+
+    // Types popover helpers
+    function positionTypesPopover() {
+      const btn = btnTypes;
+      const pop = typesPopover;
+      const rect = btn.getBoundingClientRect();
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
+      const left = Math.min(rect.left + scrollX, (window.innerWidth + scrollX) - pop.offsetWidth - 12);
+      const top = rect.bottom + scrollY + 6;
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+    }
+    function openTypesPopover() {
+      typesPopover.classList.add('open');
+      positionTypesPopover();
+      typesFilterEl.value = '';
+      filterTypes('');
+      document.addEventListener('click', onDocClickCloseTypes, true);
+      window.addEventListener('resize', positionTypesPopover);
+      window.addEventListener('scroll', positionTypesPopover, true);
+    }
+    function closeTypesPopover() {
+      typesPopover.classList.remove('open');
+      document.removeEventListener('click', onDocClickCloseTypes, true);
+      window.removeEventListener('resize', positionTypesPopover);
+      window.removeEventListener('scroll', positionTypesPopover, true);
+    }
+    function onDocClickCloseTypes(e) {
+      if (!typesPopover.classList.contains('open')) { return; }
+      const target = e.target;
+      if (target === btnTypes || btnTypes.contains(target)) { return; }
+      if (typesPopover.contains(target)) { return; }
+      closeTypesPopover();
+    }
+    function filterTypes(query) {
+      const q = query.trim().toLowerCase();
+      const items = typesListEl.querySelectorAll('label.item');
+      for (const item of items) {
+        const name = (item.querySelector('span:last-child')?.textContent || '').toLowerCase();
+        item.style.display = name.includes(q) ? '' : 'none';
       }
     }
 
@@ -434,7 +669,7 @@
       containerRect = layoutEl.getBoundingClientRect();
       document.body.classList.add('dragging');
       e.preventDefault();
-      const startLeft = currentLeft == null ? Math.round(containerRect.width * 0.6) : currentLeft;
+      const startLeft = currentLeft == null ? Math.round(containerRect.width * 0.5) : currentLeft;
       const clamped = clampLeft(startLeft, containerRect.width);
       dragPos = clamped;
       positionGuide(clamped);
@@ -472,56 +707,149 @@
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         const dir = event.key === 'ArrowLeft' ? -1 : 1;
         const rect = layoutEl.getBoundingClientRect();
-        const next = clampLeft((currentLeft ?? Math.round(rect.width * 0.6)) + dir * step, rect.width);
+        const next = clampLeft((currentLeft ?? Math.round(rect.width * 0.5)) + dir * step, rect.width);
         setLeftWidth(next);
         event.preventDefault();
       }
     });
 
     function attachBlockInteractions(blockEl, nodeId) {
-      blockEl.addEventListener('mouseenter', () => {
-        blockEl.classList.add('hover');
-        const node = nodeMap.get(nodeId);
-        if (node) { selInfoEl.textContent = `${node.type}`; }
-      });
-      blockEl.addEventListener('mouseleave', () => {
-        blockEl.classList.remove('hover');
-        selInfoEl.textContent = selectedNodeId ? selInfoEl.textContent : '';
-      });
-      blockEl.addEventListener('click', () => selectNode(nodeId));
+      // No per-block listeners; we delegate clicks from the output container.
+    }
+    function updateSelectionView() {
+      for (const [id, el] of nodeContainers.entries()) {
+        el.classList.toggle('selected', selectedNodeIds.has(id));
+      }
+      if (selectedNodeIds.size === 0) {
+        nodeJsonEl.textContent = '(none)';
+        selInfoEl.textContent = '';
+        return;
+      }
+      if (selectedNodeIds.size === 1) {
+        const onlyId = Array.from(selectedNodeIds)[0];
+        const node = nodeMap.get(onlyId);
+        if (node) {
+          nodeJsonEl.textContent = JSON.stringify(node, null, 2);
+          selInfoEl.textContent = `${node.type}`;
+          ensureSelectedVisible(false);
+        }
+        return;
+      }
+      const nodes = [];
+      for (const [id] of nodeContainers.entries()) {
+        if (selectedNodeIds.has(id)) {
+          const node = nodeMap.get(id);
+          if (node) { nodes.push(node); }
+        }
+      }
+      nodeJsonEl.textContent = JSON.stringify(nodes, null, 2);
+      selInfoEl.textContent = `${nodes.length} selected`;
     }
 
-    function selectNode(nodeId) {
-      if (selectedNodeId === nodeId) { return; }
-      // Clear previous
-      if (selectedNodeId) {
-        const prev = nodeContainers.get(selectedNodeId);
-        if (prev) { prev.classList.remove('selected'); }
+    // Ensure the single selected block is visible with minimal scrolling.
+    // If preferCenterWhenOut is true and the block is completely out of view,
+    // center it; if partially visible, scroll just enough to fully reveal it.
+    function ensureSelectedVisible(preferCenterWhenOut) {
+      if (!renderAreaEl) { return; }
+      if (selectedNodeIds.size !== 1) { return; }
+      const onlyId = Array.from(selectedNodeIds)[0];
+      const block = nodeContainers.get(onlyId);
+      if (!block) { return; }
+      if (block.classList.contains('collapsed')) { return; }
+      const container = renderAreaEl;
+      const containerHeight = container.clientHeight;
+      const blockHeight = block.offsetHeight;
+      if (blockHeight === 0) { return; }
+      // If block is larger than the viewport, do not scroll
+      if (blockHeight >= containerHeight) { return; }
+      const margin = 8;
+      // Compute block position relative to container scrollTop
+      const cRect = container.getBoundingClientRect();
+      const bRect = block.getBoundingClientRect();
+      const blockTop = (bRect.top - cRect.top) + container.scrollTop;
+      const blockBottom = blockTop + blockHeight;
+      const viewTop = container.scrollTop;
+      const viewBottom = viewTop + containerHeight;
+      const fullyVisible = blockTop >= viewTop && blockBottom <= viewBottom;
+      if (fullyVisible) { return; }
+      const completelyOut = (blockBottom <= viewTop) || (blockTop >= viewBottom);
+      let nextTop = viewTop;
+      if (preferCenterWhenOut && completelyOut) {
+        nextTop = Math.round(blockTop - (containerHeight - blockHeight) / 2);
+      } else if (blockTop < viewTop) {
+        // Scroll up just enough plus a small margin
+        nextTop = Math.max(0, Math.round(blockTop - margin));
+      } else if (blockBottom > viewBottom) {
+        // Scroll down just enough plus a small margin
+        nextTop = Math.round(blockBottom - containerHeight + margin);
       }
-      selectedNodeId = nodeId;
-      const container = nodeContainers.get(nodeId);
-      if (container) { container.classList.add('selected'); }
-      const node = nodeMap.get(nodeId);
-      if (node) {
-        nodeJsonEl.textContent = JSON.stringify(node, null, 2);
-        selInfoEl.textContent = `${node.type}`;
+      const maxTop = container.scrollHeight - container.clientHeight;
+      nextTop = Math.max(0, Math.min(nextTop, maxTop));
+      if (nextTop !== viewTop) {
+        container.scrollTo({ top: nextTop, behavior: 'smooth' });
       }
-      const containerEl = nodeContainers.get(nodeId);
-      if (containerEl) { containerEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    }
+
+    function toggleSelect(nodeId, event) {
+      const isToggle = !!(event && (event.ctrlKey || event.metaKey));
+      const isShift = !!(event && event.shiftKey);
+      const isLeftClick = !!(event && (event.button === 0 || event.button == null));
+
+      if (isShift && isLeftClick && selectionAnchorId && nodeIndex.has(selectionAnchorId) && nodeIndex.has(nodeId)) {
+        const anchorIndex = nodeIndex.get(selectionAnchorId);
+        const targetIndex = nodeIndex.get(nodeId);
+        const start = Math.min(anchorIndex, targetIndex);
+        const end = Math.max(anchorIndex, targetIndex);
+        const rangeIds = nodeOrder.slice(start, end + 1);
+        if (!isToggle) {
+          selectedNodeIds.clear();
+        }
+        for (const id of rangeIds) {
+          selectedNodeIds.add(id);
+        }
+      } else if (isToggle) {
+        if (selectedNodeIds.has(nodeId)) { selectedNodeIds.delete(nodeId); } else { selectedNodeIds.add(nodeId); }
+        selectionAnchorId = nodeId;
+      } else {
+        if (selectedNodeIds.size === 1 && selectedNodeIds.has(nodeId)) {
+          selectedNodeIds.clear();
+        } else {
+          selectedNodeIds.clear();
+          selectedNodeIds.add(nodeId);
+        }
+        selectionAnchorId = nodeId;
+      }
+      updateSelectionView();
       updateCollapseStates();
     }
 
     function clearSelection() {
-      if (!selectedNodeId) { return; }
-      const prev = nodeContainers.get(selectedNodeId);
-      if (prev) { prev.classList.remove('selected'); }
-      selectedNodeId = null;
-      nodeJsonEl.textContent = '(none)';
-      selInfoEl.textContent = '';
+      if (selectedNodeIds.size === 0) { return; }
+      selectedNodeIds.clear();
+      updateSelectionView();
       updateCollapseStates();
     }
 
+    // Delegate block clicks to a single handler for better performance
+    // Prevent text selection on Ctrl/Cmd or Shift + Left Click to keep range/multi-select crisp
+    outputEl.addEventListener('mousedown', (event) => {
+      const isLeft = (event && (event.button === 0));
+      const hasModifier = !!(event && (event.ctrlKey || event.metaKey || event.shiftKey));
+      if (isLeft && hasModifier) { event.preventDefault(); }
+    });
+    outputEl.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) { return; }
+      const block = target.closest('.block');
+      if (!block || !outputEl.contains(block)) { return; }
+      const nodeId = block.dataset.nodeId;
+      if (!nodeId) { return; }
+      toggleSelect(nodeId, event);
+    });
+
     function renderAst(ast) {
+      // Make rendering a distinct activity in the log
+      setStatus('Rendering...', false, true);
       clearRender();
       if (!ast || ast.type !== 'Document' || !Array.isArray(ast.children)) {
         setStatus('Input must be a Document node with children[]', true);
@@ -594,6 +922,8 @@
         block.dataset.type = node.type || 'Unknown';
         nodeContainers.set(nodeId, block);
         attachBlockInteractions(block, nodeId);
+        nodeOrder.push(nodeId);
+        nodeIndex.set(nodeId, nodeOrder.length - 1);
 
         // Type label badge
         const badge = document.createElement('div');
@@ -605,22 +935,33 @@
 
         // No per-block toggles; collapse is global-only
 
+        let lineNumber = 0;
         for (let index = 0; index < lines.length; index += 1) {
           const text = lines[index];
-          const span = document.createElement('span');
-          span.className = 'line';
-          span.dataset.nodeId = nodeId;
-          span.dataset.type = node.type || 'Unknown';
+          lineNumber += 1;
+          const lineEl = document.createElement('span');
+          lineEl.className = 'line';
+          lineEl.dataset.nodeId = nodeId;
+          lineEl.dataset.type = node.type || 'Unknown';
+          // Line number gutter
+          const lnEl = document.createElement('span');
+          lnEl.className = 'ln';
+          lnEl.textContent = String(totalLines + 1); // global running count
+          // Content cell
+          const contentEl = document.createElement('span');
+          contentEl.className = 'content';
           if ((node.type || 'Unknown') === 'PageBreak') {
-            span.classList.add('page-break');
-            span.textContent = '␌'; // SYMBOL FOR FORM FEED to visualize page breaks
+            lineEl.classList.add('page-break');
+            contentEl.textContent = '␌'; // SYMBOL FOR FORM FEED to visualize page breaks
           } else {
             // Use textContent with white-space: pre to preserve spacing
-            span.dataset.raw = text;
-            if (showWhitespace) { renderWhitespaceSpans(span, text); } else { span.textContent = text; }
+            contentEl.dataset.raw = text;
+            if (showWhitespace) { renderWhitespaceSpans(contentEl, text); } else { contentEl.textContent = text; }
           }
-          block.appendChild(span);
-          nodeLines.get(nodeId).push(span);
+          lineEl.appendChild(lnEl);
+          lineEl.appendChild(contentEl);
+          block.appendChild(lineEl);
+          nodeLines.get(nodeId).push(lineEl);
           totalLines += 1;
         }
         // Summary (visible when collapsed)
@@ -637,9 +978,13 @@
       }
 
       outputEl.appendChild(frag);
+      // Set fixed line-number gutter width based on total lines (monospace 'ch')
+      const digits = Math.max(2, String(totalLines).length);
+      outputEl.style.setProperty('--ln-width', (digits + 2) + 'ch');
       buildLegend(typesInUse);
       updateCollapseStates();
-      applyWhitespaceVisibility();
+      // Defer whitespace markers to idle time for smoother first paint
+      scheduleWhitespaceRender();
       setStatus('Rendered ' + totalLines + ' lines.');
     }
 
@@ -653,14 +998,14 @@
 
     function parseAndRender() {
       try {
-        setStatus('');
+        setStatus('Parsing JSON...', false, true);
         const text = inputEl.value.trim();
         if (!text) { clearRender(); setStatus('No input'); return; }
         const ast = JSON.parse(text);
         renderAst(ast);
       } catch (e) {
         clearRender();
-        setStatus('Parse error: ' + (e && e.message ? e.message : String(e)), true);
+        setStatus('Parse error: ' + (e && e.message ? e.message : String(e)), true, false);
       }
     }
 
@@ -670,15 +1015,17 @@
 
     async function fetchUrlAndParse(url) {
       if (!url) { setStatus('Enter a URL to fetch'); return; }
+      try { btnFetchUrl.disabled = true; } catch (_) {}
+      btnFetchUrl.classList.add('loading');
       try {
         const effectiveUrl = toCorsProxy(url);
-        setStatus('Fetching: ' + effectiveUrl);
+        setStatus('Fetching: ' + effectiveUrl, false, true);
         const response = await fetch(effectiveUrl, { headers: { 'Accept': 'text/plain, */*;q=0.1' } });
         if (!response.ok) {
           throw new Error('HTTP ' + response.status + ' ' + response.statusText);
         }
         const raw = await response.text();
-        setStatus('Parsing text...');
+        setStatus('Parsing text...', false, true);
         const normalized = raw.replace(/\r?\n/g, '\n').split('\n');
         const cursor = new ArrayCursor(normalized);
         const ast = parse(cursor);
@@ -690,19 +1037,52 @@
         }
         renderAst(ast);
         const lineCount = document.querySelectorAll('.output .line').length;
-        setStatus('Fetched and parsed. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+        setStatus('Fetched and parsed. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
       } catch (error) {
         const message = (error && error.message) ? error.message : String(error);
-        setStatus('Fetch/parse error: ' + message, true);
+        setStatus('Fetch/parse error: ' + message, true, false);
+      } finally {
+        btnFetchUrl.classList.remove('loading');
+        try { btnFetchUrl.disabled = false; } catch (_) {}
       }
     }
 
-    btnRender.addEventListener('click', parseAndRender);
-    btnClear.addEventListener('click', () => { inputEl.value = ''; clearRender(); setStatus('Cleared'); });
+    btnClear.addEventListener('click', () => { inputEl.value = ''; clearRender(); setStatus('Cleared', false, false); });
     btnClearSelection.addEventListener('click', () => { clearSelection(); });
-    btnFetchUrl.addEventListener('click', () => { fetchUrlAndParse(urlInput.value.trim()); });
+    btnFetchUrl.addEventListener('click', () => { if (!btnFetchUrl.disabled) { fetchUrlAndParse(urlInput.value.trim()); } });
     urlInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); fetchUrlAndParse(urlInput.value.trim()); }
+      if (e.key === 'Enter') { e.preventDefault(); if (!btnFetchUrl.disabled) { fetchUrlAndParse(urlInput.value.trim()); } }
+    });
+    // Types popover events
+    btnTypes.addEventListener('click', () => {
+      if (typesPopover.classList.contains('open')) { closeTypesPopover(); } else { openTypesPopover(); }
+    });
+    btnTypesAll.addEventListener('click', () => {
+      for (const type of KNOWN_TYPES) {
+        if (document.body.classList.contains('type-visible-' + type)) { continue; }
+        document.body.classList.add('type-visible-' + type);
+      }
+      visibleTypes = new Set(KNOWN_TYPES);
+      // Check all checkboxes in the list
+      typesListEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+      updateCollapseStates();
+      ensureSelectedVisible(true);
+    });
+    btnTypesNone.addEventListener('click', () => {
+      for (const type of KNOWN_TYPES) {
+        document.body.classList.remove('type-visible-' + type);
+      }
+      visibleTypes.clear();
+      typesListEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+      updateCollapseStates();
+      ensureSelectedVisible(true);
+    });
+    // Debounce filter input to avoid excessive DOM work on fast typing
+    let typesFilterTimer = 0;
+    typesFilterEl.addEventListener('input', () => {
+      const value = typesFilterEl.value;
+      clearTimeout(typesFilterTimer);
+      typesFilterTimer = window.setTimeout(() => { filterTypes(value); }, 120);
     });
     btnOpenFile.addEventListener('click', () => { fileInput.click(); });
     fileInput.addEventListener('change', async () => {
@@ -714,22 +1094,84 @@
       fileInput.value = '';
     });
 
+    // Clipboard input
+    btnFromClipboard.addEventListener('click', async () => {
+      try {
+        setStatus('Reading from clipboard...', false, true);
+        let text = '';
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (err) {
+          const pasted = window.prompt('Paste RFC text or AST JSON here:');
+          text = pasted || '';
+        }
+        if (!text) { setStatus('Clipboard is empty', false, false); return; }
+        const looksJson = /^[\s\uFEFF\u200B]*[\[{]/.test(text);
+        if (looksJson) {
+          const ast = JSON.parse(text);
+          const json = JSON.stringify(ast, null, 2);
+          if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
+          renderAst(ast);
+          setStatus('Loaded AST from clipboard', false, false);
+          return;
+        }
+        const normalized = text.replace(/\r?\n/g, '\n').split('\n');
+        const cursor = new ArrayCursor(normalized);
+        const ast = parse(cursor);
+        const json = JSON.stringify(ast, null, 2);
+        if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
+        renderAst(ast);
+        setStatus('Parsed clipboard text', false, false);
+      } catch (error) {
+        setStatus('Clipboard error: ' + (error && error.message ? error.message : String(error)), true, false);
+      }
+    });
+
+    // JSON dialog
+    btnOpenJsonDialog.addEventListener('click', () => {
+      // Do not prefill with current AST; start empty to load from
+      inputEl.value = '';
+      try { jsonDialog.showModal(); } catch (_) { jsonDialog.show(); }
+    });
+    btnDialogLoad.addEventListener('click', (e) => {
+      e.preventDefault();
+      setStatus('Loading JSON...', false, true);
+      try { btnDialogLoad.disabled = true; } catch (_) {}
+      btnDialogLoad.classList.add('loading');
+      try {
+        parseAndRender();
+      } finally {
+        btnDialogLoad.classList.remove('loading');
+        try { btnDialogLoad.disabled = false; } catch (_) {}
+        try { jsonDialog.close(); } catch (_) {}
+      }
+    });
+    // Close dialog when clicking on backdrop
+    jsonDialog.addEventListener('click', (e) => {
+      const x = (e && typeof e.clientX === 'number') ? e.clientX : null;
+      const y = (e && typeof e.clientY === 'number') ? e.clientY : null;
+      if (x == null || y == null) { return; }
+      const rect = jsonDialog.getBoundingClientRect();
+      const inDialog = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      if (!inDialog) { try { jsonDialog.close(); } catch (_) {} }
+    });
+
     async function handleLocalFile(file) {
       try {
-        setStatus('Reading file: ' + file.name);
+        setStatus('Reading file: ' + file.name, false, true);
         const text = await file.text();
         const lower = file.name.toLowerCase();
         if (lower.endsWith('.json')) {
-          setStatus('Parsing JSON AST...');
+          setStatus('Parsing JSON AST...', false, true);
           const ast = JSON.parse(text);
           const json = JSON.stringify(ast, null, 2);
           if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
           renderAst(ast);
           const lineCount = document.querySelectorAll('.output .line').length;
-          setStatus('Loaded JSON. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+          setStatus('Loaded JSON. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
           return;
         }
-        setStatus('Parsing text via project parser...');
+        setStatus('Parsing text via project parser...', false, true);
         const normalized = text.replace(/\r?\n/g, '\n').split('\n');
         const cursor = new ArrayCursor(normalized);
         const ast = parse(cursor);
@@ -737,9 +1179,9 @@
         if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
         renderAst(ast);
         const lineCount = document.querySelectorAll('.output .line').length;
-        setStatus('Loaded text file. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''));
+        setStatus('Loaded text file. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
       } catch (error) {
-        setStatus('File load/parse error: ' + (error && error.message ? error.message : String(error)), true);
+        setStatus('File load/parse error: ' + (error && error.message ? error.message : String(error)), true, false);
       }
     }
     // Splitter events (mouse + touch)
@@ -751,6 +1193,7 @@
     window.addEventListener('touchend', endDrag);
     window.addEventListener('touchcancel', endDrag);
     btnSample.addEventListener('click', () => {
+      setStatus('Loading sample...', false, true);
       // RFC-like sample focusing on the Abstract section and realistic header
       const sample = {
         type: 'Document',
@@ -907,6 +1350,12 @@
       parseAndRender();
     });
 
+    // Show whitespace checkbox (global)
+    chkShowWhitespace.addEventListener('change', () => {
+      showWhitespace = chkShowWhitespace.checked;
+      applyWhitespaceVisibility();
+    });
+
     // Init: compute 72ch minimum and set default split
     (function initLayout() {
       function computeMinLeftFromCh() {
@@ -925,7 +1374,9 @@
       }
       minLeftPx = computeMinLeftFromCh();
       const rect = layoutEl.getBoundingClientRect();
-      const defaultLeft = Math.max(minLeftPx, Math.round(rect.width * 0.58));
+      const splitterWidth = 6; // CSS width
+      const maxLeft = rect.width - splitterWidth - minRightPx;
+      const defaultLeft = Math.max(minLeftPx, Math.min(Math.round(rect.width * 0.5), maxLeft));
       setLeftWidth(defaultLeft);
       window.addEventListener('resize', () => {
         minLeftPx = computeMinLeftFromCh();
