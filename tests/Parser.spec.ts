@@ -60,7 +60,7 @@ describe('parse using RFC-like snippets with context', () => {
             'BlankLine',
             'SectionTitle',
             'BlankLine',
-            'Paragraph',
+            'TableOfContents',
             'BlankLine',
             'Paragraph',
         ];
@@ -68,10 +68,10 @@ describe('parse using RFC-like snippets with context', () => {
         expect(actualKinds).toEqual(expectedValue);
 
         // Assert: ToC paragraph contains exactly the two ToC lines
-        const tableOfContentsParagraph: any = actualValue.children[3];
-        expect(tableOfContentsParagraph.type).toBe('Paragraph');
-        expect(tableOfContentsParagraph.lines.length).toBe(2);
-        expect(tableOfContentsParagraph.lines[0]).toMatch(/Introduction/);
-        expect(tableOfContentsParagraph.lines[1]).toMatch(/Roles|Implicit|Authorization Code|Resource Owner/);
+        const tableOfContentsNode: any = actualValue.children[3];
+        expect(tableOfContentsNode.type).toBe('TableOfContents');
+        expect(tableOfContentsNode.lines.length).toBe(2);
+        expect(tableOfContentsNode.lines[0]).toMatch(/Introduction/);
+        expect(tableOfContentsNode.lines[1]).toMatch(/Roles|Implicit|Authorization Code|Resource Owner/);
     });
 });

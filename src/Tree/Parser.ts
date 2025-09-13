@@ -14,6 +14,7 @@ import {PageBreakMatcher} from "./Matcher/PageBreakMatcher.js";
 import {PageFooterMatcher} from "./Matcher/PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./Matcher/PageHeaderMatcher.js";
 import {ListMatcher} from "./Matcher/ListMatcher.js";
+import {TableOfContentsMatcher} from "./Matcher/TableOfContentsMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
@@ -66,6 +67,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         BlankLineMatcher,
         TitleMatcher,
         SectionTitleMatcher,
+        TableOfContentsMatcher,
         ListMatcher,
         IndentedBlockMatcher,
         ParagraphMatcher,

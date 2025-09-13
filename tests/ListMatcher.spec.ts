@@ -115,8 +115,7 @@ describe('ListMatcher', () => {
         const doc = parse(new ArrayCursor(snippetWithContext));
         const kinds = doc.children.map((n: any) => n.type);
 
-        // Assert: remains a SectionTitle then Paragraph then BlankLine
-        expect(kinds).toEqual(['SectionTitle', 'BlankLine', 'Paragraph', 'BlankLine']);
+        // Assert: remains a SectionTitle then TableOfContents then BlankLine
+        expect(kinds).toEqual(['SectionTitle', 'BlankLine', 'TableOfContents', 'BlankLine']);
     });
 });
-

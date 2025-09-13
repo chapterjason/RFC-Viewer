@@ -20,6 +20,8 @@ import type {PageHeaderNode} from "../Node/PageHeaderNode.js";
 import {renderList} from "./RenderList.js";
 import type {ListNode} from "../Node/ListNode.js";
 import type {DocumentNode} from "../Node/DocumentNode.js";
+import {renderTableOfContents} from "./RenderTableOfContents.js";
+import type {TableOfContentsNode} from "../Node/TableOfContentsNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -45,6 +47,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderPageHeader(node as PageHeaderNode);
         case "List":
             return renderList(node as ListNode);
+        case "TableOfContents":
+            return renderTableOfContents(node as TableOfContentsNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:
