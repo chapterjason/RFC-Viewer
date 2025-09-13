@@ -17,6 +17,11 @@
 - Nodes: `Tree/Node/*` define AST node shapes and positions.
 - Utilities: `Utils/*` provide cursors and helpers for common parsing tasks.
 
+### Renderer Structure
+- Location: `Tree/Render/*` — small, composable renderers per node.
+- Entry points: `RenderDocument.ts` (flatten children), `RenderNode.ts` (dispatch by type), `RenderToString.ts` (join with `\\n`).
+- Principles: preserve blank-line counts, do not emit spaces on blank lines, use explicit spaces for indentation.
+
 ## Build, Test, and Development Commands
 - Install: `npm ci` (reproducible installs).
 - Build: `npm run build` (TypeScript → `dist/`).
@@ -30,7 +35,7 @@
 - TypeScript strict mode is enabled; fix all type errors before merging.
 - Naming: do not use abbreviations; do not use single-letter names. In loops, name the counter `index`.
 - Case: TypeScript files and folders always start with Uppercase (e.g., `Parser.ts`, `Tree/Matcher/IndentedBlockMatcher.ts`). Existing lowercase entries are legacy; prefer uppercase for any new code.
-- Line endings: normalize inputs to `\n` and serialize using `\n`.
+- Line endings: normalize inputs to `\\n` and serialize using `\\n`.
 - Indentation: spaces only. Represent indentation internally as a count of spaces. Expand leading tabs to 4 spaces. Do not emit spaces on otherwise blank lines.
 - Whitespace: preserve the count of blank lines between blocks and at file boundaries; do not preserve incidental whitespace on blank lines.
 - Braces: always use `{}` for all control structures, even single statements.
@@ -41,7 +46,7 @@
 - Commands: `npm test` (run), `npm run test:watch` (watch), `npm run coverage` (report).
 - Focus: unit tests for parsers, matchers, and utilities (`Tree/Matcher/*`, `Utils/*`), including indentation and blank-line edge cases.
 - Use short RFC-like snippets embedded directly in tests as string arrays; include several lines of context before and after each snippet to exercise matcher integration. Do not read files from outside `tests/`.
-- Normalize line endings to `\n` in test strings and keep runs deterministic (no network or writes).
+- Normalize line endings to `\\n` in test strings and keep runs deterministic (no network or writes).
 
 ### Test Structure
 - Prefer AAA comments to delineate phases when it adds clarity:
