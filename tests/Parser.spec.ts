@@ -23,7 +23,7 @@ describe('parse using RFC-like snippets with context', () => {
         const expectedValue = [
             'Paragraph',
             'BlankLine',
-            'IndentedBlock',
+            'HttpRequest',
             'BlankLine',
             'PageBreak',
             'PageHeader',
@@ -32,14 +32,13 @@ describe('parse using RFC-like snippets with context', () => {
         const actualKinds = actualValue.children.map((node: any) => node.type);
         expect(actualKinds).toEqual(expectedValue);
 
-        // Assert: indented block shape and content lines
-        const indentedBlock: any = actualValue.children[2];
-        expect(indentedBlock.type).toBe('IndentedBlock');
-        expect(indentedBlock.indent).toBe(4);
-        expect(indentedBlock.lines.length).toBe(3);
-        expect(indentedBlock.lines[0]).toMatch(/^GET \/authorize\?response_type=code/);
-        expect(indentedBlock.lines[1]).toMatch(/^\s{4}&redirect_uri=/);
-        expect(indentedBlock.lines[2]).toBe('Host: server.example.com');
+        // Assert: HttpRequest shape and content lines (indent preserved)
+        const httpRequest: any = actualValue.children[2];
+        expect(httpRequest.type).toBe('HttpRequest');
+        expect(httpRequest.lines.length).toBe(3);
+        expect(httpRequest.lines[0]).toMatch(/^\s{4}GET \/authorize\?response_type=code/);
+        expect(httpRequest.lines[1]).toMatch(/^\s{8}&redirect_uri=/);
+        expect(httpRequest.lines[2]).toMatch(/^\s{4}Host: server\.example\.com/);
     });
 
     it('groups consecutive non-blank ToC lines into a paragraph with surrounding context', () => {

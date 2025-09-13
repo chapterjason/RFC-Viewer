@@ -18,6 +18,7 @@ import {TableOfContentsMatcher} from "./Matcher/TableOfContentsMatcher.js";
 import {DefinitionListMatcher} from "./Matcher/DefinitionListMatcher.js";
 import {FigureMatcher} from "./Matcher/FigureMatcher.js";
 import {HttpResponseMatcher} from "./Matcher/HttpResponseMatcher.js";
+import {HttpRequestMatcher} from "./Matcher/HttpRequestMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
@@ -74,6 +75,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         TableOfContentsMatcher,
         ListMatcher,
         DefinitionListMatcher,
+        HttpRequestMatcher,
         HttpResponseMatcher,
         IndentedBlockMatcher,
         ParagraphMatcher,

@@ -13,6 +13,7 @@ import type {TableOfContentsNode} from "./TableOfContentsNode.js";
 import type {DefinitionListNode} from "./DefinitionListNode.js";
 import type {FigureNode} from "./FigureNode.js";
 import type {HttpResponseNode} from "./HttpResponseNode.js";
+import type {HttpRequestNode} from "./HttpRequestNode.js";
 
 export type TreeNode =
     DocumentNode
@@ -29,4 +30,5 @@ export type TreeNode =
     | TableOfContentsNode
     | DefinitionListNode
     | FigureNode
-    | HttpResponseNode;
+    | HttpResponseNode
+    | HttpRequestNode;

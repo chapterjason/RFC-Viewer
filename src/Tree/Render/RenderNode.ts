@@ -28,6 +28,8 @@ import {renderFigure} from "./RenderFigure.js";
 import type {FigureNode} from "../Node/FigureNode.js";
 import {renderHttpResponse} from "./RenderHttpResponse.js";
 import type {HttpResponseNode} from "../Node/HttpResponseNode.js";
+import {renderHttpRequest} from "./RenderHttpRequest.js";
+import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -61,6 +63,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderFigure(node as FigureNode);
         case "HttpResponse":
             return renderHttpResponse(node as HttpResponseNode);
+        case "HttpRequest":
+            return renderHttpRequest(node as HttpRequestNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:
