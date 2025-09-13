@@ -1,0 +1,28 @@
+import type {BlockMatcher} from "../BlockMatcher.js";
+import {makePosition} from "../Parser.js";
+import type {PageFooterNode} from "../Node/PageFooterNode.js";
+import {isBlankLine} from "../../Utils/IsBlankLine.js";
+
+export const PageFooterMatcher: BlockMatcher = {
+    name: "pageFooter",
+    priority: 3,
+    test: (context) => {
+        const line = context.peek(0);
+        if (line === null || isBlankLine(line)) {
+            return false;
+        }
+        const next = context.peek(1);
+        return next !== null && next.includes('\f');
+    },
+    parse: (context) => {
+        const start = makePosition(context.cursor, 0);
+        const text = context.peek(0) ?? '';
+        context.advance();
+        return {
+            type: 'PageFooter',
+            text,
+            position: {start, end: makePosition(context.cursor, 0)},
+        } as PageFooterNode;
+    },
+};
+

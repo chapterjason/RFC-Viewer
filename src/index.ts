@@ -10,13 +10,6 @@ async function main() {
 
     const ast = parse(cursor);
 
-    for (const child of ast.children) {
-        if (child.type === 'SectionTitle') {
-            console.log(child.lines.join(' ').replace('\n', ' '));
-        }
-    }
-
-    return;
     console.dir(ast, {
         depth: null,
         maxArrayLength: 5000,

@@ -13,6 +13,7 @@ describe('parse using RFC-like snippets with context', () => {
             '        &redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1',
             '    Host: server.example.com',
             '',
+            '\f',
             '   Postface explanation of what the example demonstrates.',
             '   Final remark after the example.',
         ];
@@ -24,6 +25,8 @@ describe('parse using RFC-like snippets with context', () => {
             'BlankLine',
             'IndentedBlock',
             'BlankLine',
+            'PageBreak',
+            'PageHeader',
             'Paragraph',
         ];
         const actualKinds = actualValue.children.map((node: any) => node.type);

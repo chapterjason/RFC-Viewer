@@ -10,6 +10,9 @@ import {BlankLineMatcher} from "./Matcher/BlankLineMatcher.js";
 import {MetadataMatcher} from "./Matcher/MetadataMatcher.js";
 import {TitleMatcher} from "./Matcher/TitleMatcher.js";
 import {SectionTitleMatcher} from "./Matcher/SectionTitleMatcher.js";
+import {PageBreakMatcher} from "./Matcher/PageBreakMatcher.js";
+import {PageFooterMatcher} from "./Matcher/PageFooterMatcher.js";
+import {PageHeaderMatcher} from "./Matcher/PageHeaderMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
@@ -56,6 +59,9 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
     const state: ParserState = {seenMetadata: false, seenTitle: false};
     const builtInMatchers: BlockMatcher[] = [
         MetadataMatcher,
+        PageFooterMatcher,
+        PageBreakMatcher,
+        PageHeaderMatcher,
         BlankLineMatcher,
         TitleMatcher,
         SectionTitleMatcher,
