@@ -52,7 +52,7 @@ function createContext(cursor: ArrayCursor<string>, state: ParserState): BlockCo
 }
 
 export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}): DocumentNode {
-    const state: ParserState = { seenMetadata: false, seenTitle: false };
+    const state: ParserState = {seenMetadata: false, seenTitle: false};
     const builtInMatchers: BlockMatcher[] = [
         MetadataMatcher,
         BlankLineMatcher,

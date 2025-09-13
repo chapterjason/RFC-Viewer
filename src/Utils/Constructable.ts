@@ -1,4 +1,3 @@
-
 export interface Constructable {
-    new (...args: any[]): any;
+    new(...args: any[]): any;
 }
