@@ -31,6 +31,7 @@
       --DefinitionList: rgba(142, 180, 102, 0.22);   /* olive */
       --TableOfContents: rgba(176, 146, 100, 0.22);  /* muted amber */
       --Figure: rgba(206, 120, 160, 0.22);           /* muted rose */
+      --HttpResponse: rgba(122, 162, 247, 0.18);     /* soft blue tint */
       --Document: rgba(255, 255, 255, 0.06);         /* very subtle */
 
       /* Sizing */
@@ -182,6 +183,7 @@
     .type-visible-DefinitionList .output .line[data-type="DefinitionList"] { background: var(--DefinitionList); }
     .type-visible-TableOfContents .output .line[data-type="TableOfContents"] { background: var(--TableOfContents); }
     .type-visible-Figure .output .line[data-type="Figure"] { background: var(--Figure); }
+    .type-visible-HttpResponse .output .line[data-type="HttpResponse"] { background: var(--HttpResponse); }
     .type-visible-Document .output .line[data-type="Document"] { background: var(--Document); }
 
     /* Hover and selection are now applied to .block containers */
@@ -285,7 +287,7 @@
     let currentLeft = null;
 
     const KNOWN_TYPES = [
-      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','Figure','BlankLine','PageHeader','PageFooter','PageBreak'
+      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','Figure','HttpResponse','BlankLine','PageHeader','PageFooter','PageBreak'
     ];
     const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
 

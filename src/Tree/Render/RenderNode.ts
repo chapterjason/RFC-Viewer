@@ -26,6 +26,8 @@ import {renderDefinitionList} from "./RenderDefinitionList.js";
 import type {DefinitionListNode} from "../Node/DefinitionListNode.js";
 import {renderFigure} from "./RenderFigure.js";
 import type {FigureNode} from "../Node/FigureNode.js";
+import {renderHttpResponse} from "./RenderHttpResponse.js";
+import type {HttpResponseNode} from "../Node/HttpResponseNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -57,6 +59,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderDefinitionList(node as DefinitionListNode);
         case "Figure":
             return renderFigure(node as FigureNode);
+        case "HttpResponse":
+            return renderHttpResponse(node as HttpResponseNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:
