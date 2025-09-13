@@ -11,6 +11,7 @@ import type {PageHeaderNode} from "./PageHeaderNode.js";
 import type {ListNode} from "./ListNode.js";
 import type {TableOfContentsNode} from "./TableOfContentsNode.js";
 import type {DefinitionListNode} from "./DefinitionListNode.js";
+import type {FigureNode} from "./FigureNode.js";
 
 export type TreeNode =
     DocumentNode
@@ -25,4 +26,5 @@ export type TreeNode =
     | PageHeaderNode
     | ListNode
     | TableOfContentsNode
-    | DefinitionListNode;
+    | DefinitionListNode
+    | FigureNode;

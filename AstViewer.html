@@ -29,6 +29,7 @@
       --List: rgba(92, 178, 168, 0.22);
       --DefinitionList: rgba(92, 168, 120, 0.22);
       --TableOfContents: rgba(168, 120, 92, 0.22);
+      --Figure: rgba(200, 160, 255, 0.20);
       --Document: rgba(255, 255, 255, 0.04);
 
       /* Sizing */
@@ -162,6 +163,7 @@
     .output .block[data-type="PageFooter"] .type-badge { background: var(--PageFooter); }
     .output .block[data-type="PageHeader"] .type-badge { background: var(--PageHeader); }
     .output .block[data-type="List"] .type-badge { background: var(--List); }
+    .output .block[data-type="Figure"] .type-badge { background: var(--Figure); }
     .output .block[data-type="DefinitionList"] .type-badge { background: var(--DefinitionList); }
     .output .block[data-type="TableOfContents"] .type-badge { background: var(--TableOfContents); }
     .output .block[data-type="Document"] .type-badge { background: var(--Document); }
@@ -179,6 +181,7 @@
     .type-visible-List .output .line[data-type="List"] { background: var(--List); }
     .type-visible-DefinitionList .output .line[data-type="DefinitionList"] { background: var(--DefinitionList); }
     .type-visible-TableOfContents .output .line[data-type="TableOfContents"] { background: var(--TableOfContents); }
+    .type-visible-Figure .output .line[data-type="Figure"] { background: var(--Figure); }
     .type-visible-Document .output .line[data-type="Document"] { background: var(--Document); }
 
     /* Hover and selection are now applied to .block containers */
@@ -281,7 +284,7 @@
     let currentLeft = null;
 
     const KNOWN_TYPES = [
-      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','BlankLine','PageHeader','PageFooter','PageBreak'
+      'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','Figure','BlankLine','PageHeader','PageFooter','PageBreak'
     ];
     const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
 
@@ -489,6 +492,20 @@
               return `DefinitionList: ${node.items?.length ?? 0} term${(node.items?.length ?? 0) !== 1 ? 's' : ''}`;
             case 'TableOfContents':
               return `TableOfContents: ${lines.length} entr${lines.length === 1 ? 'y' : 'ies'}`;
+            case 'Figure': {
+              // Try to extract a caption if present on the last non-blank line
+              let caption = '';
+              for (let i = lines.length - 1; i >= 0; i -= 1) {
+                const t = (lines[i] || '').trim();
+                if (!t) { continue; }
+                const m = t.match(/^Figure\s+(\d+)\s*:\s*(.*)$/);
+                if (m) {
+                  caption = `Figure ${m[1]}: ${m[2]}`.trim();
+                }
+                break;
+              }
+              return caption || `Figure: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
+            }
             case 'PageHeader':
               return `Header: ${(node.text ?? '').slice(0, 56)}`;
             case 'PageFooter':
@@ -673,21 +690,156 @@
     window.addEventListener('touchend', endDrag);
     window.addEventListener('touchcancel', endDrag);
     btnSample.addEventListener('click', () => {
+      // RFC-like sample focusing on the Abstract section and realistic header
       const sample = {
         type: 'Document',
-        position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 14, column: 1, offset: 200 } },
+        position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 99, column: 1, offset: 9999 } },
         children: [
-          { type: 'Title', position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 13, offset: 12 } }, lines: ['Sample RFC'] },
-          { type: 'BlankLine', position: { start: { line: 2, column: 1, offset: 13 }, end: { line: 2, column: 1, offset: 13 } } },
-          { type: 'Metadata', position: { start: { line: 3, column: 1, offset: 14 }, end: { line: 5, column: 1, offset: 40 } }, lines: ['Author: Jane Doe', 'Date: 2025-09-13'] },
-          { type: 'BlankLine', position: { start: { line: 6, column: 1, offset: 41 }, end: { line: 6, column: 1, offset: 41 } } },
-          { type: 'Paragraph', position: { start: { line: 7, column: 1, offset: 42 }, end: { line: 8, column: 1, offset: 120 } }, lines: ['This is a paragraph.', 'It has two lines.'] },
-          { type: 'BlankLine', position: { start: { line: 9, column: 1, offset: 121 }, end: { line: 9, column: 1, offset: 121 } } },
-          { type: 'List', position: { start: { line: 10, column: 1, offset: 122 }, end: { line: 13, column: 1, offset: 200 } }, items: [
-            { marker: '-', markerIndent: 0, contentIndent: 2, lines: [' First item', ' continuation line'] },
-            { marker: '*', markerIndent: 0, contentIndent: 2, lines: [' Second item'] }
+          // 0: Leading blank line
+          { type: 'BlankLine', position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } } },
+
+          // 1: Metadata
+          { type: 'Metadata', position: { start: { line: 2, column: 1, offset: 1 }, end: { line: 5, column: 1, offset: 200 } }, lines: [
+            'Interdum Egestas Typographi Factus (IETF)                  D. Ipsum, Ed.',
+            'Rogatio Commentariorum: 9999                                   Lorum Corp',
+            'Categoria: Specimen Tractus'
           ]},
-          { type: 'BlankLine', position: { start: { line: 14, column: 1, offset: 200 }, end: { line: 14, column: 1, offset: 200 } } }
+
+          // 2: Blank line before title
+          { type: 'BlankLine', position: { start: { line: 6, column: 1, offset: 201 }, end: { line: 6, column: 1, offset: 201 } } },
+
+          // 3: Title
+          { type: 'Title', position: { start: { line: 7, column: 1, offset: 202 }, end: { line: 7, column: 60, offset: 260 } }, lines: [
+            '                 Lorem Ipsum Dolor Sit Amet'
+          ]},
+
+          // 4: Blank line
+          { type: 'BlankLine', position: { start: { line: 8, column: 1, offset: 261 }, end: { line: 8, column: 1, offset: 261 } } },
+
+          // 5: SectionTitle - Abstract
+          { type: 'SectionTitle', position: { start: { line: 9, column: 1, offset: 262 }, end: { line: 9, column: 9, offset: 270 } }, lines: [
+            'Abstract'
+          ]},
+
+          // 6: Blank line
+          { type: 'BlankLine', position: { start: { line: 10, column: 1, offset: 271 }, end: { line: 10, column: 1, offset: 271 } } },
+
+          // 7: Paragraph - abstract body (acrostic: "THIS IS AN EXAMPLE TEXT")
+          { type: 'Paragraph', position: { start: { line: 11, column: 1, offset: 272 }, end: { line: 14, column: 1, offset: 600 } }, lines: [
+            '   Tenetur Habitasse Ipsum Sollicitudin Inceptos Sapien',
+            '   Aenean Nascetur Eleifend Xiphoides Amet Magnis Posuere Lorem Elit',
+            '   Tellus Egestas Xiphos Tristique'
+          ]},
+
+          // 8: Blank line
+          { type: 'BlankLine', position: { start: { line: 15, column: 1, offset: 601 }, end: { line: 15, column: 1, offset: 601 } } },
+
+          // 9: SectionTitle - Table of Contents
+          { type: 'SectionTitle', position: { start: { line: 16, column: 1, offset: 620 }, end: { line: 16, column: 21, offset: 640 } }, lines: [
+            'Table of Contents'
+          ]},
+
+          // 10: Blank line
+          { type: 'BlankLine', position: { start: { line: 17, column: 1, offset: 641 }, end: { line: 17, column: 1, offset: 641 } } },
+
+          // 11: TableOfContents - two entries (one simple, one wrapped)
+          { type: 'TableOfContents', position: { start: { line: 18, column: 1, offset: 642 }, end: { line: 21, column: 1, offset: 700 } },
+            lines: [
+              '   1. Lorem Ipsum ..................................................4',
+              '     1.1. Dolor Sit ................................................6',
+              '   2. Amet Consectetur',
+              '     ...............................................................10'
+            ],
+            entries: [
+              { raw: '   1. Lorem Ipsum ..................................................4', indent: 3, title: '1. Lorem Ipsum', page: 4 },
+              { raw: '     1.1. Dolor Sit ................................................6', indent: 5, title: '1.1. Dolor Sit', page: 6 },
+              { raw: '   2. Amet Consectetur\n     ...............................................................10', indent: 3, title: '2. Amet Consectetur', page: 10 },
+            ]
+          },
+
+          // 12: Blank line
+          { type: 'BlankLine', position: { start: { line: 22, column: 1, offset: 701 }, end: { line: 22, column: 1, offset: 701 } } },
+
+          // 13: SectionTitle - Notation and Conventions
+          { type: 'SectionTitle', position: { start: { line: 23, column: 1, offset: 720 }, end: { line: 23, column: 30, offset: 750 } }, lines: [
+            'Notation and Conventions'
+          ]},
+
+          // 14: Blank line
+          { type: 'BlankLine', position: { start: { line: 24, column: 1, offset: 751 }, end: { line: 24, column: 1, offset: 751 } } },
+
+          // 15: DefinitionList - terms with definitions
+          { type: 'DefinitionList', position: { start: { line: 25, column: 1, offset: 752 }, end: { line: 30, column: 1, offset: 820 } }, items: [
+            { term: 'Lorum Nomen', termIndent: 3, definitionIndent: 6, lines: [
+              'Inanis descriptio de rebus fictis et vacuis.',
+            ]},
+            { term: 'Ipsum Signum', termIndent: 3, definitionIndent: 6, lines: [
+              'Nugae sine sensu ad specimen textus implendum.',
+            ]}
+          ]},
+
+          // 16: Blank line
+          { type: 'BlankLine', position: { start: { line: 31, column: 1, offset: 821 }, end: { line: 31, column: 1, offset: 821 } } },
+
+          // 17: List - unordered list of grant types (with wrapped content)
+          { type: 'List', position: { start: { line: 32, column: 1, offset: 840 }, end: { line: 38, column: 1, offset: 900 } }, items: [
+            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
+              'Lorum',
+            ]},
+            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
+              'Ipsum',
+            ]},
+            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
+              'Dolor',
+            ]}
+          ]},
+
+          // 18: Blank line
+          { type: 'BlankLine', position: { start: { line: 39, column: 1, offset: 901 }, end: { line: 39, column: 1, offset: 901 } } },
+
+          // 19: IndentedBlock - HTTP request example
+          { type: 'IndentedBlock', position: { start: { line: 40, column: 5, offset: 920 }, end: { line: 42, column: 1, offset: 960 } }, indent: 4, lines: [
+            'Lorem ipsum dolor sit amet, consectetur',
+            'adipiscing elit, sed do eiusmod tempor',
+            'incididunt ut labore et dolore magna.'
+          ]},
+
+          // 20: Blank line
+          { type: 'BlankLine', position: { start: { line: 43, column: 1, offset: 961 }, end: { line: 43, column: 1, offset: 961 } } },
+
+          // 21: Figure - ASCII diagram with caption
+          { type: 'Figure', position: { start: { line: 44, column: 1, offset: 980 }, end: { line: 51, column: 1, offset: 1040 } }, lines: [
+            '   +--------+                               +---------------+',
+            '   |        |--(A)- Inanis Nexus ---------> |   Exemplum    |',
+            '   | Lorum  |                               |     Ipsum     |',
+            '   |        |<-(B)-- Vacuus Rivus --------- |               |',
+            '   +--------+                               +---------------+',
+            '   Figure 1: Exemplum Textus (specimen)'
+          ]},
+
+          // 22: Blank line
+          { type: 'BlankLine', position: { start: { line: 52, column: 1, offset: 1041 }, end: { line: 52, column: 1, offset: 1041 } } },
+
+          // 23: PageFooter before a page break
+          { type: 'PageFooter', position: { start: { line: 53, column: 1, offset: 1050 }, end: { line: 53, column: 1, offset: 1050 } }, text: 'Lorum                         Specimen Series                        [Page 1]' },
+
+          // 24: PageBreak (form feed)
+          { type: 'PageBreak', position: { start: { line: 54, column: 1, offset: 1060 }, end: { line: 54, column: 1, offset: 1060 } } },
+
+          // 25: PageHeader after page break
+          { type: 'PageHeader', position: { start: { line: 55, column: 1, offset: 1070 }, end: { line: 55, column: 1, offset: 1070 } }, text: 'RFC 9999                    Lorem Ipsum Dolor Sit Amet' },
+
+          // 26: Blank line
+          { type: 'BlankLine', position: { start: { line: 56, column: 1, offset: 1071 }, end: { line: 56, column: 1, offset: 1071 } } },
+
+          // 27: Paragraph - continuation narrative
+          { type: 'Paragraph', position: { start: { line: 57, column: 1, offset: 1080 }, end: { line: 58, column: 1, offset: 1120 } }, lines: [
+            '   Nulla facit exemplaria; specimina tantum hic leguntur,',
+            '   textus omnino fictus et vacuus ad usum ostensionis.'
+          ]},
+
+          // 28: Trailing blank line
+          { type: 'BlankLine', position: { start: { line: 59, column: 1, offset: 1121 }, end: { line: 59, column: 1, offset: 1121 } } }
         ]
       };
       inputEl.value = JSON.stringify(sample, null, 2);

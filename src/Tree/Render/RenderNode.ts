@@ -24,6 +24,8 @@ import {renderTableOfContents} from "./RenderTableOfContents.js";
 import type {TableOfContentsNode} from "../Node/TableOfContentsNode.js";
 import {renderDefinitionList} from "./RenderDefinitionList.js";
 import type {DefinitionListNode} from "../Node/DefinitionListNode.js";
+import {renderFigure} from "./RenderFigure.js";
+import type {FigureNode} from "../Node/FigureNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -53,6 +55,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderTableOfContents(node as TableOfContentsNode);
         case "DefinitionList":
             return renderDefinitionList(node as DefinitionListNode);
+        case "Figure":
+            return renderFigure(node as FigureNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:
