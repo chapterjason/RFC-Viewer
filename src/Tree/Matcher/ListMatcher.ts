@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, makePosition, sliceLineText} from "../Parser.js";
+import {getIndentation, sliceLineText} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {ListItemNode, ListNode} from "../Node/ListNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
@@ -156,7 +156,7 @@ export const ListMatcher: BlockMatcher = {
         return true;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
+        
         const items: ListItemNode[] = [];
         let listBaseIndent: number | null = null;
         let listMarkerIndent: number | null = null;
@@ -322,7 +322,6 @@ export const ListMatcher: BlockMatcher = {
         return {
             type: 'List',
             items,
-            position: {start, end: makePosition(context.cursor, 0)},
         } as ListNode;
     },
 };

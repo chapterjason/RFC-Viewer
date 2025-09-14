@@ -10,7 +10,6 @@ describe('RenderAbnf', () => {
                 '  token = 1*( %x41-5A / %x61-7A )',
                 '          / %x30-39',
             ],
-            position: { start: { line: 0, column: 0, offset: null }, end: { line: 2, column: 0, offset: null } }
         } as any;
 
         // Act
@@ -23,4 +22,3 @@ describe('RenderAbnf', () => {
         ]);
     });
 });
-

@@ -511,9 +511,8 @@
     }
 
     function makeNodeId(node, index) {
-      // Prefer stable key: type@startLine:startColumn-endLine:endColumn#index
-      const p = node.position || { start: {line: 0, column: 0}, end: {line: 0, column: 0} };
-      return `${node.type}@${p.start?.line ?? 0}:${p.start?.column ?? 0}-${p.end?.line ?? 0}:${p.end?.column ?? 0}#${index}`;
+      // Simple, stable key without position: type#index
+      return `${node.type || 'Unknown'}#${index}`;
     }
 
     function buildLegend(typesInUse) {

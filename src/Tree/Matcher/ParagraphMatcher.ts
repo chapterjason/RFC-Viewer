@@ -1,6 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import {IndentedBlockMatcher} from "./IndentedBlockMatcher.js";
-import {makePosition} from "../Parser.js";
 import {paragraphFromLines} from "../../Utils/ParagraphFromLines.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
@@ -15,7 +14,6 @@ export const ParagraphMatcher: BlockMatcher = {
         return line !== null && !isBlankLine(line);
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
         while (!context.cursor.isEOL()) {
             const line = context.peek(0);
@@ -40,6 +38,6 @@ export const ParagraphMatcher: BlockMatcher = {
             lines.push(line);
             context.advance();
         }
-        return paragraphFromLines(lines, start.line, start);
+        return paragraphFromLines(lines);
     },
 };

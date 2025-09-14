@@ -2,18 +2,14 @@ import {describe, expect, it} from 'vitest';
 import {renderNode} from '../src/Tree/Render/RenderNode.js';
 import type {TreeNode} from '../src/Tree/Node/TreeNode.js';
 
-function makeRange() {
-    return {start: {line: 0, column: 0, offset: null}, end: {line: 0, column: 0, offset: null}};
-}
-
 describe('RenderNode', () => {
     it('dispatches to specific renderers based on node type', () => {
         // Arrange
         const nodes: TreeNode[] = [
-            {type: 'BlankLine', position: makeRange()} as any,
-            {type: 'PageBreak', position: makeRange()} as any,
-            {type: 'PageHeader', position: makeRange(), text: 'Header'} as any,
-            {type: 'PageFooter', position: makeRange(), text: 'Footer'} as any,
+            {type: 'BlankLine'} as any,
+            {type: 'PageBreak'} as any,
+            {type: 'PageHeader', text: 'Header'} as any,
+            {type: 'PageFooter', text: 'Footer'} as any,
         ];
 
         // Act
@@ -25,10 +21,9 @@ describe('RenderNode', () => {
 
     it('falls back to empty render for unknown node types', () => {
         // Arrange
-        const unknown: any = {type: 'Unknown', position: makeRange()};
+        const unknown: any = {type: 'Unknown'};
 
         // Act & Assert
         expect(renderNode(unknown as any)).toEqual([]);
     });
 });
-

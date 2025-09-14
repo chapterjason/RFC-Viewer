@@ -1,10 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {renderNode} from '../src/Tree/Render/RenderNode.js';
 
-function makeRange() {
-    return {start: {line: 0, column: 0, offset: null}, end: {line: 2, column: 0, offset: null}};
-}
-
 describe('RenderHttpRequest', () => {
     it('preserves request lines exactly', () => {
         // Arrange
@@ -14,7 +10,6 @@ describe('RenderHttpRequest', () => {
                 '   GET /authorize HTTP/1.1',
                 '   Host: example.com'
             ],
-            position: makeRange(),
         };
 
         // Act
@@ -37,10 +32,8 @@ describe('RenderHttpRequest', () => {
                 '     "a": 1',
                 '   }'
             ],
-            position: makeRange(),
         };
         const rendered = renderNode(node);
         expect(rendered).toEqual([...node.lines, '', ...node.bodyLines]);
     });
 });
-

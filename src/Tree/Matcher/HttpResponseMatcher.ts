@@ -1,6 +1,6 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
-import {getIndentation, makePosition} from "../Parser.js";
+import {getIndentation} from "../Parser.js";
 import type {HttpResponseNode} from "../Node/HttpResponseNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
@@ -33,7 +33,7 @@ export const HttpResponseMatcher: BlockMatcher = {
         return second !== null && headerLineRegex.test(second);
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
+        
         const lines: string[] = [];
 
         // Establish base indent (align with IndentedBlock's base behavior of min 4)
@@ -105,7 +105,7 @@ export const HttpResponseMatcher: BlockMatcher = {
             type: "HttpResponse",
             lines,
             bodyLines,
-            position: {start, end: makePosition(context.cursor, 0)}
+            
         } as HttpResponseNode;
     },
 };

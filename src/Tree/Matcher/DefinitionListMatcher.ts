@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, makePosition, sliceLineText} from "../Parser.js";
+import {getIndentation, sliceLineText} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {DefinitionItemNode, DefinitionListNode} from "../Node/DefinitionListNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
@@ -83,7 +83,6 @@ export const DefinitionListMatcher: BlockMatcher = {
         return isTermLine(line, next, false);
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const items: DefinitionItemNode[] = [];
 
         // Establish base term indentation from first item
@@ -200,7 +199,6 @@ export const DefinitionListMatcher: BlockMatcher = {
         return {
             type: 'DefinitionList',
             items,
-            position: {start, end: makePosition(context.cursor, 0)},
         } as DefinitionListNode;
     },
 };

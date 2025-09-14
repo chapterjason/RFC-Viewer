@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, makePosition} from "../Parser.js";
+import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {SectionTitleNode} from "../Node/SectionTitleNode.js";
 
@@ -49,7 +49,7 @@ export const SectionTitleMatcher: BlockMatcher = {
         return false;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
+        
         const lines: string[] = [];
         while (!context.cursor.isEOL()) {
             const current = context.peek(0);
@@ -65,7 +65,6 @@ export const SectionTitleMatcher: BlockMatcher = {
         return {
             type: "SectionTitle",
             lines,
-            position: {start, end: makePosition(context.cursor, 0)}
         } as SectionTitleNode;
     },
 };

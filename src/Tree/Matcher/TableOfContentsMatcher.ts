@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, makePosition} from "../Parser.js";
+import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {TableOfContentsEntry, TableOfContentsNode} from "../Node/TableOfContentsNode.js";
 
@@ -121,7 +121,6 @@ export const TableOfContentsMatcher: BlockMatcher = {
         return false;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
         const entries: TableOfContentsEntry[] = [];
         // Track the minimum indentation among detected ToC entries
@@ -192,7 +191,6 @@ export const TableOfContentsMatcher: BlockMatcher = {
             type: 'TableOfContents',
             lines,
             entries,
-            position: {start, end: makePosition(context.cursor, 0)},
         } as TableOfContentsNode;
     },
 };

@@ -1,5 +1,4 @@
 import type {BlockMatcher} from "../BlockMatcher.js";
-import {makePosition} from "../Parser.js";
 import type {PageBreakNode} from "../Node/PageBreakNode.js";
 
 export const PageBreakMatcher: BlockMatcher = {
@@ -15,12 +14,9 @@ export const PageBreakMatcher: BlockMatcher = {
         return line.includes('\f');
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         context.advance();
         return {
             type: 'PageBreak',
-            position: {start, end: makePosition(context.cursor, 0)},
         } as PageBreakNode;
     },
 };
-

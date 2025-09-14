@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {makePosition} from "../Parser.js";
+ 
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {FigureNode} from "../Node/FigureNode.js";
 
@@ -93,7 +93,7 @@ export const FigureMatcher: BlockMatcher = {
         return false;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
+        
         const lines: string[] = [];
 
         // 1) Read diagram block (consecutive non-blank diagram-like lines)
@@ -154,7 +154,6 @@ export const FigureMatcher: BlockMatcher = {
         return {
             type: "Figure",
             lines,
-            position: {start, end: makePosition(context.cursor, 0)}
         } as FigureNode;
     },
 };

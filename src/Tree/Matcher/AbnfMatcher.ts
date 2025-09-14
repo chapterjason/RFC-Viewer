@@ -1,5 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, makePosition} from "../Parser.js";
+import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {AbnfNode} from "../Node/AbnfNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
@@ -89,7 +89,6 @@ export const AbnfMatcher: BlockMatcher = {
         return base >= 1 && evidence >= 1;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
         const first = context.peek(0)!;
         const base = getIndentation(first);
@@ -113,7 +112,7 @@ export const AbnfMatcher: BlockMatcher = {
         return {
             type: "Abnf",
             lines,
-            position: { start, end: makePosition(context.cursor, 0) }
+            
         } as AbnfNode;
     },
 };

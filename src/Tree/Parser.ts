@@ -1,6 +1,4 @@
 import type {ArrayCursor} from "../Utils/ArrayCursor.js";
-import type {Position} from "./Position.js";
-import type {Range} from "./Range.js";
 import type {ParagraphNode} from "./Node/ParagraphNode.js";
 import type {DocumentNode} from "./Node/DocumentNode.js";
 import type {TreeNode} from "./Node/TreeNode.js";
@@ -30,26 +28,6 @@ export const getIndentation = (line: string) => {
     return m ? m[0].length : 0
 };
 export const sliceLineText = (line: string, n: number) => line.slice(Math.min(n, line.length));
-
-export function makePosition(cursor: ArrayCursor<string>, column = 0): Position {
-    return {
-        line: cursor.getIndex(),
-        column,
-        offset: null,
-    }
-}
-
-export function rangeFrom(
-    cursor: ArrayCursor<string>,
-    startColumn: number,
-    endLine: number = cursor.getIndex(),
-    endColumn: number = cursor.getLength() - 1,
-): Range {
-    return {
-        start: makePosition(cursor, startColumn),
-        end: {line: endLine, column: endColumn, offset: null},
-    }
-}
 
 function createContext(cursor: ArrayCursor<string>, state: ParserState): BlockContext {
     return {
@@ -99,12 +77,10 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         }
 
         if (!matched) {
-            const start = makePosition(cursor, 0);
             const line = context.peek(0);
             children.push({
                 type: "Paragraph",
                 lines: line ? [line] : [],
-                position: {start, end: makePosition(cursor, 0)}
             } as ParagraphNode);
             cursor.next();
             continue;
@@ -117,6 +93,5 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
     return {
         type: "Document",
         children,
-        position: {start: {line: 0, column: 0, offset: null}, end: makePosition(cursor, 0)},
     };
 }

@@ -1,6 +1,5 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {MetadataNode} from "../Node/MetadataNode.js";
-import {makePosition} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 
 export const MetadataMatcher: BlockMatcher = {
@@ -31,7 +30,6 @@ export const MetadataMatcher: BlockMatcher = {
         );
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
         // Skip leading blanks at the very top of the document
         while (!context.cursor.isEOL()) {
@@ -62,7 +60,6 @@ export const MetadataMatcher: BlockMatcher = {
         return {
             type: "Metadata",
             lines,
-            position: {start, end: makePosition(context.cursor, 0)}
         } as MetadataNode;
     },
 };

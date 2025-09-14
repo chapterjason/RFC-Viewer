@@ -2,10 +2,6 @@ import {describe, expect, it} from 'vitest';
 import {renderList} from '../src/Tree/Render/RenderList.js';
 import type {ListItemNode, ListNode} from '../src/Tree/Node/ListNode.js';
 
-function makeRange() {
-  return {start: {line: 0, column: 0, offset: null}, end: {line: 0, column: 0, offset: null}};
-}
-
 describe('RenderList marker-only item', () => {
   it('renders marker on its own line, with content starting on the following line', () => {
     // Arrange: marker-only line followed by two content lines
@@ -19,7 +15,7 @@ describe('RenderList marker-only item', () => {
         'Specification", World Wide Web Consortium',
       ],
     } as any;
-    const node: ListNode = {type: 'List', position: makeRange(), items: [item]};
+    const node: ListNode = {type: 'List', items: [item]} as any;
 
     // Act
     const lines = renderList(node);
@@ -30,4 +26,3 @@ describe('RenderList marker-only item', () => {
     expect(lines[2]).toBe('              Specification", World Wide Web Consortium');
   });
 });
-

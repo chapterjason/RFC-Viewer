@@ -1,6 +1,6 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
-import {getIndentation, makePosition} from "../Parser.js";
+import {getIndentation} from "../Parser.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
@@ -66,7 +66,6 @@ export const HttpRequestMatcher: BlockMatcher = {
         return false;
     },
     parse: (context) => {
-        const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
 
         const first = context.peek(0)!;
@@ -128,7 +127,6 @@ export const HttpRequestMatcher: BlockMatcher = {
             type: "HttpRequest",
             lines,
             bodyLines,
-            position: {start, end: makePosition(context.cursor, 0)}
         } as HttpRequestNode;
     },
 };
