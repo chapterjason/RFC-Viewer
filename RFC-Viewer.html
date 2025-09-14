@@ -31,6 +31,7 @@
                 --DefinitionList: rgba(142, 180, 102, 0.22); /* olive */
                 --TableOfContents: rgba(176, 146, 100, 0.22); /* muted amber */
                 --Figure: rgba(206, 120, 160, 0.22); /* muted rose */
+                --Table: rgba(153, 184, 120, 0.22); /* muted moss */
                 --HttpResponse: rgba(122, 162, 247, 0.18); /* soft blue tint */
                 --HttpRequest: rgba(122, 247, 162, 0.18); /* soft green tint */
                 --Abnf: rgba(247, 162, 122, 0.18); /* soft orange tint */
@@ -693,6 +694,9 @@
             .type-visible-Figure .output .line[data-type="Figure"] {
                 background: var(--Figure);
             }
+            .type-visible-Table .output .line[data-type="Table"] {
+                background: var(--Table);
+            }
 
             .type-visible-HttpResponse .output .line[data-type="HttpResponse"] {
                 background: var(--HttpResponse);
@@ -1184,7 +1188,7 @@
             let suppressEditorUpdate = false; // do not overwrite editor while applying edits
 
             const KNOWN_TYPES = [
-                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'DefinitionList', 'TableOfContents', 'Figure', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
+                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'DefinitionList', 'TableOfContents', 'Figure', 'Table', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
             ];
             const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
             const MAX_LINE_LENGTH = 72; // validator threshold
@@ -2062,6 +2066,8 @@
                                 }
                                 return caption || `Figure: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
                             }
+                            case 'Table':
+                                return `Table: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
                             case 'PageHeader':
                                 return `Header: ${(node.text ?? '').slice(0, 56)}`;
                             case 'PageFooter':

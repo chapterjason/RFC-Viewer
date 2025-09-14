@@ -32,6 +32,8 @@ import {renderHttpRequest} from "./RenderHttpRequest.js";
 import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
 import {renderAbnf} from "./RenderAbnf.js";
 import type {AbnfNode} from "../Node/AbnfNode.js";
+import {renderTable} from "./RenderTable.js";
+import type {TableNode} from "../Node/TableNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
 
@@ -69,6 +71,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderHttpRequest(node as HttpRequestNode);
         case "Abnf":
             return renderAbnf(node as AbnfNode);
+        case "Table":
+            return renderTable(node as TableNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:

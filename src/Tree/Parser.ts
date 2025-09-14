@@ -18,6 +18,7 @@ import {FigureMatcher} from "./Matcher/FigureMatcher.js";
 import {HttpResponseMatcher} from "./Matcher/HttpResponseMatcher.js";
 import {HttpRequestMatcher} from "./Matcher/HttpRequestMatcher.js";
 import {AbnfMatcher} from "./Matcher/AbnfMatcher.js";
+import {TableMatcher} from "./Matcher/TableMatcher.js";
 import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
@@ -43,6 +44,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         PageHeaderMatcher,
         BlankLineMatcher,
         FigureMatcher,
+        TableMatcher,
         TitleMatcher,
         SectionTitleMatcher,
         TableOfContentsMatcher,
