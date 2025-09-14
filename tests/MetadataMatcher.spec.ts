@@ -65,4 +65,62 @@ describe('MetadataMatcher', () => {
         // Assert: subsequent attempts do not match
         expect(sut.test(context)).toBe(false);
     });
+
+    it('matches when first line is "Network Working Group" and RFC markers follow', () => {
+        // Arrange: first non-blank line lacks IETF mention but is a known header starter
+        const inputLines = [
+            'Network Working Group                                          T. Dierks',
+            'Request for Comments: 4346                                   Independent',
+            'Obsoletes: 2246                                              E. Rescorla',
+            'Category: Standards Track                                     RTFM, Inc.',
+            '',
+            'Body begins here.',
+        ];
+        const context = createTestContext(inputLines);
+        const sut = MetadataMatcher;
+
+        // Act
+        const canMatch = sut.test(context);
+        expect(canMatch).toBe(true);
+        const node: any = sut.parse(context);
+
+        // Assert
+        expect(node.type).toBe('Metadata');
+        expect(node.lines.length).toBe(4);
+        expect(context.state.seenMetadata).toBe(true);
+        expect(context.peek(0)).toBe('');
+    });
+
+    it('matches additional known sources at the top of the document', () => {
+        // Arrange: try several valid header sources
+        const sources = [
+            'Internet Engineering Task Force (IETF)',
+            'Internet Architecture Board (IAB)',
+            'Internet Research Task Force (IRTF)',
+            'Independent Submission',
+        ];
+        const sut = MetadataMatcher;
+
+        for (const source of sources) {
+            const inputLines = [
+                `${source}                                         Example Author`,
+                'Request for Comments: 9999                              Example Org',
+                'Category: Informational',
+                '',
+                'Body begins here.',
+            ];
+            const context = createTestContext(inputLines);
+
+            // Act
+            const canMatch = sut.test(context);
+            expect(canMatch).toBe(true);
+            const node: any = sut.parse(context);
+
+            // Assert
+            expect(node.type).toBe('Metadata');
+            expect(node.lines.length).toBe(3);
+            expect(context.state.seenMetadata).toBe(true);
+            expect(context.peek(0)).toBe('');
+        }
+    });
 });

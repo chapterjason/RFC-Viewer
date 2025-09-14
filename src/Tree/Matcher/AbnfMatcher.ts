@@ -1,11 +1,11 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {AbnfNode} from "../Node/AbnfNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 import type {BlockContext} from "../BlockContext.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
 
 // Conservative heuristics to detect ABNF rule blocks in RFC-like text.
 // Key signals:

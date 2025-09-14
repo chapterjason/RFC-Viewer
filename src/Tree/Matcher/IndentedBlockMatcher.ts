@@ -1,7 +1,8 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {IndentedBlockNode} from "../Node/IndentedBlockNode.js";
-import {getIndentation, sliceLineText} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
+import {sliceLineText} from "../../Utils/SliceLineText.js";
 
 export const IndentedBlockMatcher: BlockMatcher = {
     name: "indentedBlock",

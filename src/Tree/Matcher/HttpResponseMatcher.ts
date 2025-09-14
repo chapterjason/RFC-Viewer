@@ -1,10 +1,10 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
-import {getIndentation} from "../Parser.js";
 import type {HttpResponseNode} from "../Node/HttpResponseNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
 
 // Matches HTTP responses rendered in RFC-like text. Examples:
 //   "   HTTP/1.1 302 Found"

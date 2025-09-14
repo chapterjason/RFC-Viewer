@@ -1,10 +1,10 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
-import {getIndentation} from "../Parser.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
 
 // Matches HTTP requests rendered in RFC-like text. Examples:
 //   "    GET /path?query HTTP/1.1"

@@ -1,7 +1,7 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {SectionTitleNode} from "../Node/SectionTitleNode.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
 
 export const SectionTitleMatcher: BlockMatcher = {
     name: "sectionTitle",

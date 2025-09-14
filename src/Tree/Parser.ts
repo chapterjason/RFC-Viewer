@@ -23,12 +23,6 @@ import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
 import type {ParserState} from "./ParserState.js";
 
-export const getIndentation = (line: string) => {
-    const m = line.match(/^\s*/);
-    return m ? m[0].length : 0
-};
-export const sliceLineText = (line: string, n: number) => line.slice(Math.min(n, line.length));
-
 function createContext(cursor: ArrayCursor<string>, state: ParserState): BlockContext {
     return {
         cursor,

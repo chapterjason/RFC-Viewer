@@ -1,7 +1,7 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {TableOfContentsEntry, TableOfContentsNode} from "../Node/TableOfContentsNode.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
 
 // Leader line ends with dot leaders followed by a page number
 const leaderLineRegex = /\.{2,}\s*\d+\s*$/;

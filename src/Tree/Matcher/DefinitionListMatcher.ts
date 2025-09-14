@@ -1,11 +1,12 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
-import {getIndentation, sliceLineText} from "../Parser.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {DefinitionItemNode, DefinitionListNode} from "../Node/DefinitionListNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 import {ListMatcher} from "./ListMatcher.js";
+import {getIndentation} from "../../Utils/GetIndentation.js";
+import {sliceLineText} from "../../Utils/SliceLineText.js";
 
 // Basic ABNF rule start to avoid misclassifying ABNF as DefinitionList
 const abnfRuleStartRegex = /^\s*[A-Za-z][A-Za-z0-9-]*\s*=\/?\s+.+$/;

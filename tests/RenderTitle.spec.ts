@@ -7,7 +7,8 @@ describe('RenderTitle', () => {
         // Arrange
         const node: TitleNode = {
             type: 'Title',
-            lines: ['                 The OAuth 2.0 Authorization Framework'],
+            indent: 17,
+            lines: ['The OAuth 2.0 Authorization Framework'],
         };
 
         // Act
