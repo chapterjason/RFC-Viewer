@@ -79,23 +79,37 @@ export const HttpRequestMatcher: BlockMatcher = {
             context.advance();
         }
 
-        // Optional blank line + body block at same-or-deeper indent
+        // Optional blank line + body block at same-or-deeper indent.
+        // Heuristic: For requests using typically body-less methods (e.g., GET, HEAD, TRACE),
+        // only treat the following indented block as a body if headers indicate a body
+        // (e.g., Content-Type, Content-Length, Transfer-Encoding). This avoids swallowing
+        // narrative paragraphs that are written at the same indent as the example.
         let bodyLines: string[] | undefined = undefined;
         const maybeBlank = context.peek(0);
         if (maybeBlank !== null && isBlankLine(maybeBlank)) {
             const afterBlank = context.peek(1);
             if (afterBlank !== null && getIndentation(afterBlank) >= base) {
-                context.advance(); // consume the blank
-                bodyLines = [];
-                while (!context.cursor.isEOL()) {
-                    const line = context.peek(0);
-                    if (line === null) { break; }
-                    if (isBlankLine(line)) { break; }
-                    if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) { break; }
-                    const indent = getIndentation(line);
-                    if (indent < base) { break; }
-                    bodyLines.push(line);
+                // Decide if we should consider a body for this request
+                const firstLine = lines[0] ?? "";
+                const methodMatch = firstLine.trim().match(/^([A-Z!#$%&'*+.^_`|~-]+)/);
+                const method = methodMatch ? methodMatch[1] : "";
+                const likelyBodyless = method === "GET" || method === "HEAD" || method === "TRACE";
+                const hasBodyHeader = lines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
+
+                if (!likelyBodyless || hasBodyHeader) {
+                    // consume the blank and collect the body block
                     context.advance();
+                    bodyLines = [];
+                    while (!context.cursor.isEOL()) {
+                        const line = context.peek(0);
+                        if (line === null) { break; }
+                        if (isBlankLine(line)) { break; }
+                        if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) { break; }
+                        const indent = getIndentation(line);
+                        if (indent < base) { break; }
+                        bodyLines.push(line);
+                        context.advance();
+                    }
                 }
             }
         }
@@ -108,4 +122,3 @@ export const HttpRequestMatcher: BlockMatcher = {
         } as HttpRequestNode;
     },
 };
-

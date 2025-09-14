@@ -64,24 +64,36 @@ export const HttpResponseMatcher: BlockMatcher = {
 
         // Optionally consume a single blank line then a body block that is indented
         // to at least the base indent.
+        // Heuristic: Only capture a body if headers indicate a body is present
+        // (e.g., Content-Type, Content-Length, Transfer-Encoding) and the status
+        // code allows a body (not 1xx, 204, 304). This avoids swallowing narrative
+        // text following examples.
         let bodyLines: string[] | undefined = undefined;
         const maybeBlank = context.peek(0);
         if (maybeBlank !== null && isBlankLine(maybeBlank)) {
             // Look ahead to see if a body block follows at same-or-deeper indent
             const afterBlank = context.peek(1);
             if (afterBlank !== null && getIndentation(afterBlank) >= base) {
-                // consume the blank line here (but do not record it in node; renderer will add one)
-                context.advance();
-                bodyLines = [];
-                while (!context.cursor.isEOL()) {
-                    const line = context.peek(0);
-                    if (line === null) { break; }
-                    if (isBlankLine(line)) { break; }
-                    if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) { break; }
-                    const indent = getIndentation(line);
-                    if (indent < base) { break; }
-                    bodyLines.push(line);
+                const firstLine = lines[0] ?? "";
+                const m = firstLine.match(/HTTP\/(?:\d(?:\.\d)?)\s+(\d{3})/);
+                const status = m ? parseInt(m[1], 10) : NaN;
+                const statusAllowsBody = !(status >= 100 && status < 200) && status !== 204 && status !== 304;
+                const hasBodyHeader = lines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
+
+                if (statusAllowsBody && hasBodyHeader) {
+                    // consume the blank line here (but do not record it in node; renderer will add one)
                     context.advance();
+                    bodyLines = [];
+                    while (!context.cursor.isEOL()) {
+                        const line = context.peek(0);
+                        if (line === null) { break; }
+                        if (isBlankLine(line)) { break; }
+                        if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) { break; }
+                        const indent = getIndentation(line);
+                        if (indent < base) { break; }
+                        bodyLines.push(line);
+                        context.advance();
+                    }
                 }
             }
         }
