@@ -38,6 +38,9 @@
 
       /* Sizing */
       --code-size: 14px;
+      /* Column guide at 73 characters (after 72), monospace ch units */
+      --col-guide: 73ch;
+      --col-guide-color: rgba(166, 173, 187, 0.25); /* muted */
     }
 
     html, body { height: 100%; }
@@ -163,7 +166,7 @@
     .types-popover .footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); }
   
     .layout, .panel { min-height: 0; }
-    .render-area { position: relative; height: 100%; overflow: auto; contain: paint; }
+    .render-area { position: relative; height: 100%; overflow-y: scroll; overflow-x: auto; contain: paint; }
     .output {
       position: relative; margin: 0; padding: 8px 12px; background: transparent;
       border: none; color: var(--text); white-space: pre; line-height: 1.6; font-size: var(--code-size);
@@ -171,7 +174,7 @@
       font-variant-ligatures: none;
     }
     /* Line with fixed-width left index gutter, line-number gutter, and content */
-    .output .line { display: grid; grid-template-columns: var(--ix-width, 3ch) var(--ln-width, 4ch) 1fr; align-items: baseline; }
+    .output .line { display: grid; grid-template-columns: var(--ix-width, 3ch) var(--ln-width, 4ch) 1fr; align-items: baseline; position: relative; }
     .output .line .ix { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 6px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
     .output .line .ln { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 8px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
     .output .line .content { display: inline-block; padding: 0 6px; }
@@ -183,6 +186,16 @@
     .output .line .ws.ws-tab::before { content: '⇥'; }
     /* Ensure blank lines occupy vertical space without inserting spaces */
     .output .line:empty::before { content: "\200B"; }
+    /* Column guide at 72 characters (from content start). Use absolute overlay so it persists with type tints. */
+    .output .line::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: calc(var(--ix-width, 3ch) + var(--ln-width, 4ch) + var(--col-guide));
+      width: 0;
+      border-left: 1px solid var(--col-guide-color);
+      pointer-events: none;
+    }
     /* Visualize page breaks explicitly */
     .output .line.page-break { color: var(--muted); }
 
@@ -1217,7 +1230,7 @@
           // 1: Metadata
           { type: 'Metadata', position: { start: { line: 2, column: 1, offset: 1 }, end: { line: 5, column: 1, offset: 200 } }, lines: [
             'Interdum Egestas Typographi Factus (IETF)                  D. Ipsum, Ed.',
-            'Rogatio Commentariorum: 9999                                   Lorum Corp',
+            'Rogatio Commentariorum: 9999                                  Lorum Corp',
             'Categoria: Specimen Tractus'
           ]},
 
@@ -1337,7 +1350,7 @@
           { type: 'BlankLine', position: { start: { line: 52, column: 1, offset: 1041 }, end: { line: 52, column: 1, offset: 1041 } } },
 
           // 23: PageFooter before a page break
-          { type: 'PageFooter', position: { start: { line: 53, column: 1, offset: 1050 }, end: { line: 53, column: 1, offset: 1050 } }, text: 'Lorum                         Specimen Series                        [Page 1]' },
+          { type: 'PageFooter', position: { start: { line: 53, column: 1, offset: 1050 }, end: { line: 53, column: 1, offset: 1050 } }, text: 'Lorum                         Specimen Series                   [Page 1]' },
 
           // 24: PageBreak (form feed)
           { type: 'PageBreak', position: { start: { line: 54, column: 1, offset: 1060 }, end: { line: 54, column: 1, offset: 1060 } } },
@@ -1388,7 +1401,8 @@
       const rect = layoutEl.getBoundingClientRect();
       const splitterWidth = 6; // CSS width
       const maxLeft = rect.width - splitterWidth - minRightPx;
-      const defaultLeft = Math.max(minLeftPx, Math.min(Math.round(rect.width * 0.5), maxLeft));
+      const desiredDefault = 790; // default left column width in pixels
+      const defaultLeft = Math.max(minLeftPx, Math.min(desiredDefault, maxLeft));
       setLeftWidth(defaultLeft);
       window.addEventListener('resize', () => {
         minLeftPx = computeMinLeftFromCh();
