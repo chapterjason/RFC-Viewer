@@ -68,22 +68,28 @@ function isTermLine(line: string, next: string | null, allowDeep = false): boole
     if (line === null || isBlankLine(line)) {
         return false;
     }
+
     if (next === null || isBlankLine(next)) {
         return false;
     }
+
     // Avoid ABNF rules like: "b64token    = 1*( ALPHA / DIGIT /" which are not definition terms
     if (abnfRuleStartRegex.test(line)) {
         return false;
     }
+
     // Avoid Table of Contents numbered or appendix lines
     if (tocNumberedStartRegex.test(line) || tocAppendixStartRegex.test(line)) {
         return false;
     }
+
     const termIndent = getIndentation(line);
     const nextIndent = getIndentation(next);
+
     if (termIndent < 2) {
         return false;
     }
+
     // Prefer IndentedBlock for deeper indents (>= 4)
     if (!allowDeep && termIndent >= 4) {
         const nextIndent = getIndentation(next);
@@ -91,54 +97,68 @@ function isTermLine(line: string, next: string | null, allowDeep = false): boole
             return false;
         }
     }
+
     if (nextIndent <= termIndent) {
         return false;
     }
+
     // Require at least 2 more spaces to avoid false positives
     if (nextIndent < termIndent + 2) {
         return false;
     }
+
     const trimmed = line.trimEnd();
     // Avoid common non-term patterns
+
     if (/\.{2,}\s*\d+\s*$/.test(trimmed)) {
         return false; // looks like ToC
     }
+
     // Disallow obvious code constructs that commonly appear in narrative paragraphs
     // e.g., function calls or blocks spanning multiple lines
     if (trimmed.endsWith('(')) {
         return false; // looks like a function call continuation
     }
+
     if (/^[{}]$/.test(trimmed) || /[{]\s*$/.test(trimmed)) {
         return false; // looks like a code block delimiter
     }
+
     // Allow trailing ':' for template-style terms (e.g., "Error name:")
     if (/[.;]$/.test(trimmed)) {
         return false; // likely a sentence, not a term
     }
+
     if (/:$/.test(trimmed)) {
         const body = trimmed.slice(0, -1);
+
         // Reject colon-terminated lines that look like sentences (contain a period)
         if (body.includes('.')) {
             return false;
         }
     }
+
     // Exclude obvious non-term technical lines (URLs or HTTP request start)
     // Allow generic slashes in natural language terms (e.g., manufacture/modification)
     if (/https?:\/\//i.test(trimmed)) {
         return false; // URL-like content
     }
+
     if (/^\s*[A-Z][A-Z-]{2,}\s+\/.*/.test(trimmed)) {
         return false; // likely an HTTP method + path
     }
+
     // Avoid list markers
     if (ListMatcher.test({
         cursor: {peek: (o: number) => (o === 0 ? line : next)} as any,
         peek: (o: number) => (o === 0 ? line : next),
-        advance: () => {},
+        advance: () => {
+        },
         state: {seenMetadata: false, seenTitle: false},
     } as any)) {
         return false;
     }
+
     return true;
 }
 
@@ -148,70 +168,103 @@ export const DefinitionListMatcher: BlockMatcher = {
     // Ensure before IndentedBlock (50) and Paragraph (90).
     priority: 38,
     test: (context) => {
-        const line = context.peek(0);
-        const next = context.peek(1);
-        if (line === null) {
+        const line1 = context.peek(0);
+        const line2 = context.peek(1);
+        const line3 = context.peek(2);
+
+        if (line1 === null) {
             return false;
         }
+
         if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
             return false;
         }
-        if (next !== null && isTermLine(line, next, false)) {
+
+        if (line2 !== null && isTermLine(line1, line2, false)) {
             return true;
         }
+
+        if (line2 !== null && line3 !== null && isTermLine(line2, line3, false)) {
+            return true;
+        }
+
         // Also allow single-line inline definition items (term 2+spaces definition)
-        return splitInlineColumns(line) !== null;
+        return splitInlineColumns(line1) !== null;
     },
     parse: (context) => {
         const items: DefinitionItemNode[] = [];
 
         // Establish base term indentation from first item
         while (!context.cursor.isEOL()) {
-            const line = context.peek(0);
-            const next = context.peek(1);
-            if (line === null) {
+            const line1 = context.peek(0);
+            const line2 = context.peek(1);
+            const line3 = context.peek(2);
+
+            if (line1 === null) {
                 break;
             }
-            const isMultiLine = next !== null && isTermLine(line, next);
-            const inlineSplit = splitInlineColumns(line);
+
+            const isTermMultiline = line2 !== null && line3 !== null && !isTermLine(line1, line2) && isTermLine(line2, line3);
+            const isMultiLine =
+                line2 !== null && isTermLine(line1, line2) ||
+                isTermMultiline;
+            const inlineSplit = splitInlineColumns(line1);
+
             if (!isMultiLine && inlineSplit === null) {
                 break;
             }
 
-            let termIndent: number = 0;
+            let line1Indent: number = 0;
             let definitionIndent: number = 0;
+
             // Support inline definition after a colon label or general inline split.
-            let rawTerm: string;
             let term: string;
+            let termLines: string[];
+
             const item: DefinitionItemNode = {
-                term: '',
+                termLines: [],
                 termIndent: 0,
                 definitionIndent: 0,
                 lines: [],
             };
+
             if (isMultiLine) {
-                termIndent = getIndentation(line);
-                definitionIndent = getIndentation(next!);
-                rawTerm = sliceLineText(line, termIndent);
-                term = rawTerm;
-                item.term = term;
-                item.termIndent = termIndent;
+                line1Indent = getIndentation(line1);
+                definitionIndent = isTermMultiline ? getIndentation(line3!) : getIndentation(line2!);
+
+                termLines = !isTermMultiline ? [
+                    sliceLineText(line1, line1Indent)
+                ] : [
+                    sliceLineText(line1, line1Indent),
+                    sliceLineText(line2, line1Indent)
+                ];
+
+                item.termIndent = line1Indent;
                 item.definitionIndent = definitionIndent;
+
                 // Allow colon+two spaces inline fragment even in multi-line scenarios
-                const inlineMatch = rawTerm.match(/^(.*?:)\s{2,}(\S.*)$/);
+                const inlineMatch = termLines[termLines.length - 1]!.match(/^(.*?:)\s{2,}(\S.*)$/);
+
                 if (inlineMatch) {
-                    item.term = inlineMatch[1]!;
+                    termLines[termLines.length - 1] = inlineMatch[1]!;
                     item.lines.push(inlineMatch[2]!);
                     item.inline = true;
                 }
+
+                item.termLines = termLines;
+
                 // Consume term line
                 context.advance();
+
+                if (isTermMultiline) {
+                    context.advance();
+                }
             } else if (inlineSplit !== null) {
-                termIndent = inlineSplit.termIndent;
+                line1Indent = inlineSplit.termIndent;
                 definitionIndent = inlineSplit.defIndent;
                 term = inlineSplit.termText;
-                item.term = term;
-                item.termIndent = termIndent;
+                item.termLines.push(term);
+                item.termIndent = line1Indent;
                 item.definitionIndent = definitionIndent;
                 item.lines.push(inlineSplit.defText);
                 item.inline = true;
@@ -267,7 +320,7 @@ export const DefinitionListMatcher: BlockMatcher = {
                 const childDefinitionIndent = childInline ? childInline.defIndent : getIndentation(childNext);
                 const childRawTerm = childInline ? childInline.termText : sliceLineText(childTerm, childTermIndent);
                 const child: DefinitionItemNode = {
-                    term: childRawTerm,
+                    termLines: [childRawTerm],
                     termIndent: childTermIndent,
                     definitionIndent: childDefinitionIndent,
                     lines: [],
@@ -279,7 +332,7 @@ export const DefinitionListMatcher: BlockMatcher = {
                     // Handle inline definition after a colon label for child items as well.
                     const inlineMatch = childRawTerm.match(/^(.*?:)\s{2,}(\S.*)$/);
                     if (inlineMatch) {
-                        child.term = inlineMatch[1]!;
+                        child.termLines.push(inlineMatch[1]!);
                         child.lines.push(inlineMatch[2]!);
                         child.inline = true;
                     }

@@ -1,7 +1,7 @@
 import type {BaseTreeNode} from "./BaseTreeNode.js";
 
 export interface DefinitionItemNode {
-    term: string;
+    termLines: string[];
     termIndent: number;
     definitionIndent: number;
     lines: string[];

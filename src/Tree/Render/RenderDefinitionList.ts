@@ -9,16 +9,32 @@ export function renderDefinitionList(node: DefinitionListNode): string[] {
             // Inline style: keep the first definition fragment on the same line.
             // Use computed definitionIndent to preserve alignment; minimum gap of 2.
             const minGap = 2;
-            const currentStart = item.termIndent + item.term.length;
+            const currentStart = item.termIndent + item.termLines[item.termLines.length - 1]!.length;
             const gapSize = Math.max(minGap, item.definitionIndent - currentStart);
             const gap = " ".repeat(gapSize);
-            lines.push(`${termIndent}${item.term}${gap}${item.lines[0]}`);
+
+            for (let index = 0; index < item.termLines.length; index++) {
+                const termLine = item.termLines[index];
+
+                if (index === 0) {
+                    lines.push(`${termIndent}${termLine}${gap}${item.lines[0]}`);
+
+                    continue;
+                }
+
+                lines.push(`${termIndent}${termLine}`);
+            }
+
             for (let index = 1; index < item.lines.length; index += 1) {
                 const defLine = item.lines[index] ?? '';
                 lines.push(defLine.length === 0 ? '' : `${defIndent}${defLine}`);
             }
         } else {
-            lines.push(`${termIndent}${item.term}`);
+            for (let index = 0; index < item.termLines.length; index++) {
+                const termLine = item.termLines[index];
+                lines.push(`${termIndent}${termLine}`);
+            }
+
             for (const defLine of item.lines) {
                 lines.push(defLine.length === 0 ? '' : `${defIndent}${defLine}`);
             }
