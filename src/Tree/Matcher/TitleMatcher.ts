@@ -53,8 +53,6 @@ export const TitleMatcher: BlockMatcher = {
         const base = getCommonIndentation(rawLines);
         const lines = rawLines.map((s) => sliceLineText(s, base));
 
-        console.log({rawLines, base});
-
         context.state.seenTitle = true;
 
         return {
