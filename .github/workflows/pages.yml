@@ -1,0 +1,57 @@
+name: GitHub Pages Deployment
+
+on:
+    push:
+        branches: [master]
+
+permissions:
+    contents: read
+    pages: write        # required for actions/deploy-pages
+    id-token: write     # required for actions/deploy-pages
+
+concurrency:
+    group: "pages"
+    cancel-in-progress: true
+
+jobs:
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install
+              run: npm ci
+
+            - name: Build
+              run: npm run build
+
+            # Assemble the static site to publish
+            - name: Prepare site bundle
+              run: |
+                  rm -rf _site
+                  mkdir -p _site
+                  cp RFC-Viewer.html _site/index.html
+                  cp -r dist _site/dist
+
+            # Upload bundle for the deploy job
+            - name: Upload Pages artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: _site
+
+    deploy:
+        name: Deploy
+        runs-on: ubuntu-latest
+        needs: build
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v4
