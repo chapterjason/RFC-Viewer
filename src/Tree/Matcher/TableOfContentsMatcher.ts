@@ -37,6 +37,26 @@ function parseTocEntryFromLines(lines: string[]): TableOfContentsEntry {
     const first = lines[0] ?? '';
     const indent = getIndentation(first);
     const last = lines[lines.length - 1] ?? '';
+    // Special-case single-line entries to avoid duplicate titles
+    if (lines.length === 1) {
+        let page: number | null = null;
+        let soleTitle = last;
+        const m1 = last.match(/(\.{2,})\s*(\d+)\s*$/);
+        if (m1) {
+            const cutIndex = last.lastIndexOf(m1[0]);
+            soleTitle = last.slice(0, Math.max(cutIndex, 0)).trimEnd();
+            const num = parseInt(m1[2] ?? '', 10);
+            page = Number.isNaN(num) ? null : num;
+        }
+        const title = (soleTitle ?? '').replace(/\s{2,}/g, ' ').trim() || null;
+        return {
+            raw: lines.join('\n'),
+            indent,
+            title,
+            page,
+        };
+    }
+
     let page: number | null = null;
     let lastTitle = last;
     const m = last.match(/(\.{2,})\s*(\d+)\s*$/);
@@ -104,12 +124,27 @@ export const TableOfContentsMatcher: BlockMatcher = {
         const start = makePosition(context.cursor, 0);
         const lines: string[] = [];
         const entries: TableOfContentsEntry[] = [];
+        // Track the minimum indentation among detected ToC entries
+        let minEntryIndent: number | null = null;
         while (!context.cursor.isEOL()) {
             const current = context.peek(0);
             if (current === null || isBlankLine(current)) {
                 break;
             }
             if (!isLeaderLine(current) && !isPotentialTocStart(current)) {
+                // After ToC entries have begun, include unnumbered tail lines
+                // if they share the same lowest indentation.
+                const indent = getIndentation(current);
+                const trimmed = current.trim();
+                if (entries.length > 0 && minEntryIndent !== null &&
+                    indent === minEntryIndent && trimmed.length > 0 &&
+                    /^[A-Za-z]/.test(trimmed) && !leaderLineRegex.test(current)) {
+                    const entryLines = [current];
+                    lines.push(current);
+                    context.advance();
+                    entries.push(parseTocEntryFromLines(entryLines));
+                    continue;
+                }
                 break;
             }
 
@@ -118,10 +153,13 @@ export const TableOfContentsMatcher: BlockMatcher = {
                 // Single-line entry that already has leaders
                 entryLines.push(current);
                 lines.push(current);
+                const indent = getIndentation(current);
+                minEntryIndent = (minEntryIndent === null) ? indent : Math.min(minEntryIndent, indent);
                 context.advance();
             } else {
                 // Wrapped entry: start, optional continuations, then leader line
                 const startIndent = getIndentation(current);
+                minEntryIndent = (minEntryIndent === null) ? startIndent : Math.min(minEntryIndent, startIndent);
                 entryLines.push(current);
                 lines.push(current);
                 context.advance();
