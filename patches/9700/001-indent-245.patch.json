@@ -1,17 +1,7 @@
 [
   {
     "op": "replace",
-    "path": "/children/245",
-    "value": {
-      "type": "HttpRequest",
-      "lines": [
-        "     GET /authorize?response_type=token&state=9ad67f13",
-        "         &client_id=s6BhdRkqt3",
-        "         &redirect_uri=https%3A%2F%2Fclient.somesite.example",
-        "          %2Fcb%26redirect_to%253Dhttps%253A%252F",
-        "          %252Fattacker.example%252F HTTP/1.1",
-        "     Host: server.somesite.example"
-      ]
-    }
+    "path": "/children/245/indent",
+    "value": 5
   }
 ]

@@ -1,12 +1,7 @@
 [
   {
     "op": "replace",
-    "path": "/children/257",
-    "value": {
-      "type": "Paragraph",
-      "lines": [
-        "     https://attacker.example/#access_token=2YotnFZFEjr1z..."
-      ]
-    }
+    "path": "/children/257/indent",
+    "value": 5
   }
 ]
