@@ -338,7 +338,9 @@
               <button id="btnClearSelection">Clear Selection</button>
             </div>
           </div>
-          <div class="content"><pre id="nodeJson">(none)</pre></div>
+          <div class="content">
+            <textarea id="nodeEditor" placeholder="(Select a node to edit JSON)" spellcheck="false" style="width:100%; height:100%; box-sizing:border-box; resize:none; outline:none; border: 1px solid var(--border); background:#0c111b; color:var(--text); padding:12px; font-size: var(--code-size); line-height:1.6; border-radius:8px; tab-size:4;" disabled></textarea>
+          </div>
         </div>
       </div>
     </div>
@@ -404,7 +406,7 @@
     const btnTypesNone = document.getElementById('btnTypesNone');
     const typesFilterEl = document.getElementById('typesFilter');
     const chkShowWhitespace = document.getElementById('chkShowWhitespace');
-    const nodeJsonEl = document.getElementById('nodeJson');
+    const nodeEditor = document.getElementById('nodeEditor');
     const selInfoEl = document.getElementById('selInfo');
 
     const btnSample = document.getElementById('btnSample');
@@ -438,6 +440,7 @@
     let minLeftPx = 740; // will be recomputed based on 72ch
     let minRightPx = 240; // slightly smaller JSON panel for compactness
     let currentLeft = null;
+    let suppressEditorUpdate = false; // do not overwrite editor while applying edits
 
     const KNOWN_TYPES = [
       'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','Figure','HttpResponse','HttpRequest','Abnf','BlankLine','PageHeader','PageFooter','PageBreak'
@@ -519,7 +522,7 @@
       nodeIndex.clear();
       selectedNodeIds.clear();
       selectionAnchorId = null;
-      nodeJsonEl.textContent = '(none)';
+      try { nodeEditor.value = ''; nodeEditor.disabled = true; } catch (_) {}
       selInfoEl.textContent = '';
     }
 
@@ -734,7 +737,7 @@
         el.classList.toggle('selected', selectedNodeIds.has(id));
       }
       if (selectedNodeIds.size === 0) {
-        nodeJsonEl.textContent = '(none)';
+        try { nodeEditor.value = ''; nodeEditor.disabled = true; } catch (_) {}
         selInfoEl.textContent = '';
         return;
       }
@@ -742,7 +745,12 @@
         const onlyId = Array.from(selectedNodeIds)[0];
         const node = nodeMap.get(onlyId);
         if (node) {
-          nodeJsonEl.textContent = JSON.stringify(node, null, 2);
+          try {
+            nodeEditor.disabled = false;
+            if (!suppressEditorUpdate && document.activeElement !== nodeEditor) {
+              nodeEditor.value = JSON.stringify(node, null, 2);
+            }
+          } catch (_) {}
           selInfoEl.textContent = `${node.type}`;
           ensureSelectedVisible(false);
         }
@@ -755,9 +763,119 @@
           if (node) { nodes.push(node); }
         }
       }
-      nodeJsonEl.textContent = JSON.stringify(nodes, null, 2);
+      try {
+        nodeEditor.disabled = false;
+        if (!suppressEditorUpdate && document.activeElement !== nodeEditor) {
+          nodeEditor.value = JSON.stringify(nodes, null, 2);
+        }
+      } catch (_) {}
       selInfoEl.textContent = `${nodes.length} selected`;
     }
+
+    // Apply edits from the right-panel editor to the current AST and re-render
+    function applyNodeEdits(parsedValue) {
+      if (!currentAst || !Array.isArray(currentAst.children)) { return; }
+      if (selectedNodeIds.size === 0) { return; }
+      // Capture prior visibility and selection to restore after re-render
+      const prevVisible = new Set(visibleTypes);
+      const prevSelectionIndices = Array.from(selectedNodeIds).map(id => nodeIndex.get(id)).filter(i => typeof i === 'number').sort((a, b) => a - b);
+      // Capture editor focus and caret/scroll position to restore after re-render
+      const hadFocus = (document.activeElement === nodeEditor);
+      const prevStart = (typeof nodeEditor.selectionStart === 'number') ? nodeEditor.selectionStart : 0;
+      const prevEnd = (typeof nodeEditor.selectionEnd === 'number') ? nodeEditor.selectionEnd : prevStart;
+      const prevScrollTop = nodeEditor.scrollTop || 0;
+
+      // Build mapping of selected indices in render order
+      const selectedIdsInOrder = nodeOrder.filter(id => selectedNodeIds.has(id));
+      const selectedIndices = selectedIdsInOrder.map(id => nodeIndex.get(id));
+
+      // Helper to validate a node-like object
+      function isNodeLike(obj) {
+        return obj && typeof obj === 'object' && typeof obj.type === 'string';
+      }
+
+      if (selectedIndices.length === 1 && !Array.isArray(parsedValue)) {
+        if (!isNodeLike(parsedValue)) { throw new Error('Edited JSON must be a node object with a "type" string'); }
+        const idx = selectedIndices[0];
+        currentAst.children[idx] = parsedValue;
+        updateRenderedNodeAt(idx, parsedValue);
+      } else if (selectedIndices.length > 1 && Array.isArray(parsedValue)) {
+        if (parsedValue.length !== selectedIndices.length) { throw new Error(`Edited array length (${parsedValue.length}) must match selected count (${selectedIndices.length})`); }
+        for (let index = 0; index < parsedValue.length; index += 1) {
+          const obj = parsedValue[index];
+          if (!isNodeLike(obj)) { throw new Error(`Item ${index} is not a valid node object with a "type"`); }
+          const targetIdx = selectedIndices[index];
+          currentAst.children[targetIdx] = obj;
+          updateRenderedNodeAt(targetIdx, obj);
+        }
+      } else if (selectedIndices.length > 1 && !Array.isArray(parsedValue)) {
+        throw new Error('Multiple selection expects an array of nodes');
+      } else if (selectedIndices.length === 1 && Array.isArray(parsedValue)) {
+        throw new Error('Single selection expects a single node object');
+      }
+      // Renumber gutters and update collapse states
+      recomputeGlobalLineNumbers();
+      updateCollapseStates();
+      // Refresh selection view without clobbering editor
+      suppressEditorUpdate = true; updateSelectionView(); suppressEditorUpdate = false;
+      // Restore editor focus/caret if it had focus before
+      if (hadFocus) {
+        try {
+          nodeEditor.disabled = false;
+          // Defer to next frame so the value set by updateSelectionView is present
+          requestAnimationFrame(() => {
+            nodeEditor.focus();
+            const len = nodeEditor.value.length;
+            const start = Math.max(0, Math.min(prevStart, len));
+            const end = Math.max(0, Math.min(prevEnd, len));
+            nodeEditor.setSelectionRange(start, end);
+            nodeEditor.scrollTop = prevScrollTop;
+          });
+        } catch (_) {}
+      }
+    }
+
+    // Debounced input handler for the editor
+    let editorTimer = 0;
+    nodeEditor.addEventListener('input', () => {
+      const text = nodeEditor.value;
+      clearTimeout(editorTimer);
+      editorTimer = window.setTimeout(() => {
+        if (!text || selectedNodeIds.size === 0) { return; }
+        try {
+          const value = JSON.parse(text);
+          nodeEditor.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border') || '#1f2430';
+          setStatus('Applying changes...', false, true);
+          applyNodeEdits(value);
+          setStatus('Changes applied');
+        } catch (err) {
+          nodeEditor.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--danger') || '#ff6b6b';
+          setStatus('Edit error: ' + (err && err.message ? err.message : String(err)), true, false);
+        }
+      }, 250);
+    });
+
+    // Insert two spaces on Tab within the editor
+    nodeEditor.addEventListener('keydown', (event) => {
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        try {
+          const start = typeof nodeEditor.selectionStart === 'number' ? nodeEditor.selectionStart : 0;
+          const end = typeof nodeEditor.selectionEnd === 'number' ? nodeEditor.selectionEnd : start;
+          const value = nodeEditor.value || '';
+          const before = value.slice(0, start);
+          const after = value.slice(end);
+          const insert = '  ';
+          nodeEditor.value = before + insert + after;
+          const caret = start + insert.length;
+          nodeEditor.setSelectionRange(caret, caret);
+          // Keep scroll position stable
+          nodeEditor.scrollTop = nodeEditor.scrollTop;
+          // Trigger input pipeline
+          nodeEditor.dispatchEvent(new InputEvent('input', { bubbles: true }));
+        } catch (_) {}
+      }
+    });
 
     // Ensure the single selected block is visible with minimal scrolling.
     // If preferCenterWhenOut is true and the block is completely out of view,
@@ -1034,6 +1152,106 @@
       }
     }
 
+    // Incremental update of an already-rendered node without re-rendering everything
+    function updateRenderedNodeAt(childIndex, newNode) {
+      const nodeId = nodeOrder[childIndex];
+      if (!nodeId) { return; }
+      const block = nodeContainers.get(nodeId);
+      if (!block) { return; }
+      nodeMap.set(nodeId, newNode);
+      block.dataset.type = newNode.type || 'Unknown';
+      const badge = block.querySelector('.type-badge');
+      if (badge) { badge.textContent = newNode.type || 'Unknown'; }
+
+      // Gather the summary element if present
+      const summaryEl = block.querySelector('.summary');
+      // Remove existing line elements tracked for this node
+      const prevLines = nodeLines.get(nodeId) || [];
+      for (const el of prevLines) { if (el && el.parentNode === block) { block.removeChild(el); } }
+      nodeLines.set(nodeId, []);
+
+      const lines = renderNode(newNode);
+      // Insert new line elements after the badge and before the summary
+      const siblingIdx = Number(block.dataset.siblingIndex || '0');
+      let insertBefore = summaryEl || null;
+      let totalLines = 0; // will recompute globally later
+      for (let index = 0; index < lines.length; index += 1) {
+        const text = lines[index];
+        const lineEl = document.createElement('span');
+        lineEl.className = 'line';
+        lineEl.dataset.nodeId = nodeId;
+        lineEl.dataset.type = newNode.type || 'Unknown';
+        const lnEl = document.createElement('span');
+        lnEl.className = 'ln';
+        lnEl.textContent = '';
+        const contentEl = document.createElement('span');
+        contentEl.className = 'content';
+        if ((newNode.type || 'Unknown') === 'PageBreak') {
+          lineEl.classList.add('page-break');
+          contentEl.textContent = '␌';
+        } else {
+          contentEl.dataset.raw = text;
+          if (showWhitespace) { renderWhitespaceSpans(contentEl, text); } else { contentEl.textContent = text; }
+        }
+        const ixEl = document.createElement('span');
+        ixEl.className = 'ix';
+        ixEl.textContent = (index === 0) ? String(siblingIdx) : '';
+        lineEl.appendChild(ixEl);
+        lineEl.appendChild(lnEl);
+        lineEl.appendChild(contentEl);
+        block.insertBefore(lineEl, insertBefore);
+        nodeLines.get(nodeId).push(lineEl);
+        totalLines += 1;
+      }
+      // Update summary text
+      if (summaryEl) {
+        try { summaryEl.textContent = (function(linesArr){
+          try {
+            switch (newNode.type) {
+              case 'Document':
+                return `Document: ${newNode.children?.length ?? 0} blocks`;
+              case 'Title':
+              case 'SectionTitle':
+              case 'Paragraph':
+                return (linesArr[0] ?? '').trim() || (newNode.type || 'Unknown');
+              case 'IndentedBlock':
+                return `IndentedBlock: ${linesArr.length} line${linesArr.length !== 1 ? 's' : ''}`;
+              case 'List':
+                return `List: ${newNode.items?.length ?? 0} item${(newNode.items?.length ?? 0) !== 1 ? 's' : ''}`;
+              case 'DefinitionList':
+                return `DefinitionList: ${newNode.items?.length ?? 0} term${(newNode.items?.length ?? 0) !== 1 ? 's' : ''}`;
+              case 'TableOfContents':
+                return `TableOfContents: ${linesArr.length} entr${linesArr.length === 1 ? 'y' : 'ies'}`;
+              case 'Figure':
+                return `Figure: ${linesArr.length} line${linesArr.length !== 1 ? 's' : ''}`;
+              case 'PageHeader':
+                return `Header: ${(newNode.text ?? '').slice(0, 56)}`;
+              case 'PageFooter':
+                return `Footer: ${(newNode.text ?? '').slice(0, 56)}`;
+              case 'PageBreak':
+                return 'PageBreak';
+              case 'BlankLine':
+                return 'Blank line';
+              default:
+                return newNode.type || 'Unknown';
+            }
+          } catch (_) { return newNode.type || 'Unknown'; }
+        })(lines);
+        } catch (_) {}
+      }
+    }
+
+    function recomputeGlobalLineNumbers() {
+      // Renumber all line gutters and update gutter width based on count
+      const lineEls = outputEl.querySelectorAll('.line .ln');
+      let count = 0;
+      for (const ln of lineEls) {
+        count += 1; ln.textContent = String(count);
+      }
+      const digits = Math.max(2, String(count).length);
+      outputEl.style.setProperty('--ln-width', (digits + 2) + 'ch');
+    }
+
     function toCorsProxy(url) {
       return 'https://no-cors.w-ixx.de/?url=' + encodeURIComponent(url);
     }
@@ -1222,57 +1440,56 @@
       // RFC-like sample focusing on the Abstract section and realistic header
       const sample = {
         type: 'Document',
-        position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 99, column: 1, offset: 9999 } },
         children: [
           // 0: Leading blank line
-          { type: 'BlankLine', position: { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } } },
+          { type: 'BlankLine' },
 
           // 1: Metadata
-          { type: 'Metadata', position: { start: { line: 2, column: 1, offset: 1 }, end: { line: 5, column: 1, offset: 200 } }, lines: [
+          { type: 'Metadata', lines: [
             'Interdum Egestas Typographi Factus (IETF)                  D. Ipsum, Ed.',
             'Rogatio Commentariorum: 9999                                  Lorum Corp',
             'Categoria: Specimen Tractus'
           ]},
 
           // 2: Blank line before title
-          { type: 'BlankLine', position: { start: { line: 6, column: 1, offset: 201 }, end: { line: 6, column: 1, offset: 201 } } },
+          { type: 'BlankLine' },
 
           // 3: Title
-          { type: 'Title', position: { start: { line: 7, column: 1, offset: 202 }, end: { line: 7, column: 60, offset: 260 } }, lines: [
+          { type: 'Title', lines: [
             '                 Lorem Ipsum Dolor Sit Amet'
           ]},
 
           // 4: Blank line
-          { type: 'BlankLine', position: { start: { line: 8, column: 1, offset: 261 }, end: { line: 8, column: 1, offset: 261 } } },
+          { type: 'BlankLine' },
 
           // 5: SectionTitle - Abstract
-          { type: 'SectionTitle', position: { start: { line: 9, column: 1, offset: 262 }, end: { line: 9, column: 9, offset: 270 } }, lines: [
+          { type: 'SectionTitle', lines: [
             'Abstract'
           ]},
 
           // 6: Blank line
-          { type: 'BlankLine', position: { start: { line: 10, column: 1, offset: 271 }, end: { line: 10, column: 1, offset: 271 } } },
+          { type: 'BlankLine' },
 
           // 7: Paragraph - abstract body (acrostic: "THIS IS AN EXAMPLE TEXT")
-          { type: 'Paragraph', position: { start: { line: 11, column: 1, offset: 272 }, end: { line: 14, column: 1, offset: 600 } }, lines: [
+          { type: 'Paragraph', lines: [
             '   Tenetur Habitasse Ipsum Sollicitudin Inceptos Sapien',
             '   Aenean Nascetur Eleifend Xiphoides Amet Magnis Posuere Lorem Elit',
             '   Tellus Egestas Xiphos Tristique'
           ]},
 
           // 8: Blank line
-          { type: 'BlankLine', position: { start: { line: 15, column: 1, offset: 601 }, end: { line: 15, column: 1, offset: 601 } } },
+          { type: 'BlankLine' },
 
           // 9: SectionTitle - Table of Contents
-          { type: 'SectionTitle', position: { start: { line: 16, column: 1, offset: 620 }, end: { line: 16, column: 21, offset: 640 } }, lines: [
+          { type: 'SectionTitle', lines: [
             'Table of Contents'
           ]},
 
           // 10: Blank line
-          { type: 'BlankLine', position: { start: { line: 17, column: 1, offset: 641 }, end: { line: 17, column: 1, offset: 641 } } },
+          { type: 'BlankLine' },
 
           // 11: TableOfContents - two entries (one simple, one wrapped)
-          { type: 'TableOfContents', position: { start: { line: 18, column: 1, offset: 642 }, end: { line: 21, column: 1, offset: 700 } },
+          { type: 'TableOfContents',
             lines: [
               '   1. Lorem Ipsum ..................................................4',
               '     1.1. Dolor Sit ................................................6',
@@ -1287,18 +1504,18 @@
           },
 
           // 12: Blank line
-          { type: 'BlankLine', position: { start: { line: 22, column: 1, offset: 701 }, end: { line: 22, column: 1, offset: 701 } } },
+          { type: 'BlankLine' },
 
           // 13: SectionTitle - Notation and Conventions
-          { type: 'SectionTitle', position: { start: { line: 23, column: 1, offset: 720 }, end: { line: 23, column: 30, offset: 750 } }, lines: [
+          { type: 'SectionTitle', lines: [
             'Notation and Conventions'
           ]},
 
           // 14: Blank line
-          { type: 'BlankLine', position: { start: { line: 24, column: 1, offset: 751 }, end: { line: 24, column: 1, offset: 751 } } },
+          { type: 'BlankLine' },
 
           // 15: DefinitionList - terms with definitions
-          { type: 'DefinitionList', position: { start: { line: 25, column: 1, offset: 752 }, end: { line: 30, column: 1, offset: 820 } }, items: [
+          { type: 'DefinitionList', items: [
             { term: 'Lorum Nomen', termIndent: 3, definitionIndent: 6, lines: [
               'Inanis descriptio de rebus fictis et vacuis.',
             ]},
@@ -1308,10 +1525,10 @@
           ]},
 
           // 16: Blank line
-          { type: 'BlankLine', position: { start: { line: 31, column: 1, offset: 821 }, end: { line: 31, column: 1, offset: 821 } } },
+          { type: 'BlankLine' },
 
           // 17: List - unordered list of grant types (with wrapped content)
-          { type: 'List', position: { start: { line: 32, column: 1, offset: 840 }, end: { line: 38, column: 1, offset: 900 } }, items: [
+          { type: 'List', items: [
             { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
               'Lorum',
             ]},
@@ -1324,20 +1541,20 @@
           ]},
 
           // 18: Blank line
-          { type: 'BlankLine', position: { start: { line: 39, column: 1, offset: 901 }, end: { line: 39, column: 1, offset: 901 } } },
+          { type: 'BlankLine' },
 
           // 19: IndentedBlock - HTTP request example
-          { type: 'IndentedBlock', position: { start: { line: 40, column: 5, offset: 920 }, end: { line: 42, column: 1, offset: 960 } }, indent: 4, lines: [
+          { type: 'IndentedBlock', indent: 4, lines: [
             'Lorem ipsum dolor sit amet, consectetur',
             'adipiscing elit, sed do eiusmod tempor',
             'incididunt ut labore et dolore magna.'
           ]},
 
           // 20: Blank line
-          { type: 'BlankLine', position: { start: { line: 43, column: 1, offset: 961 }, end: { line: 43, column: 1, offset: 961 } } },
+          { type: 'BlankLine' },
 
           // 21: Figure - ASCII diagram with caption
-          { type: 'Figure', position: { start: { line: 44, column: 1, offset: 980 }, end: { line: 51, column: 1, offset: 1040 } }, lines: [
+          { type: 'Figure', lines: [
             '   +--------+                               +---------------+',
             '   |        |--(A)- Inanis Nexus ---------> |   Exemplum    |',
             '   | Lorum  |                               |     Ipsum     |',
@@ -1347,28 +1564,28 @@
           ]},
 
           // 22: Blank line
-          { type: 'BlankLine', position: { start: { line: 52, column: 1, offset: 1041 }, end: { line: 52, column: 1, offset: 1041 } } },
+          { type: 'BlankLine' },
 
           // 23: PageFooter before a page break
-          { type: 'PageFooter', position: { start: { line: 53, column: 1, offset: 1050 }, end: { line: 53, column: 1, offset: 1050 } }, text: 'Lorum                         Specimen Series                   [Page 1]' },
+          { type: 'PageFooter', text: 'Lorum                         Specimen Series                   [Page 1]' },
 
           // 24: PageBreak (form feed)
-          { type: 'PageBreak', position: { start: { line: 54, column: 1, offset: 1060 }, end: { line: 54, column: 1, offset: 1060 } } },
+          { type: 'PageBreak' },
 
           // 25: PageHeader after page break
-          { type: 'PageHeader', position: { start: { line: 55, column: 1, offset: 1070 }, end: { line: 55, column: 1, offset: 1070 } }, text: 'RFC 9999                    Lorem Ipsum Dolor Sit Amet' },
+          { type: 'PageHeader', text: 'RFC 9999                    Lorem Ipsum Dolor Sit Amet' },
 
           // 26: Blank line
-          { type: 'BlankLine', position: { start: { line: 56, column: 1, offset: 1071 }, end: { line: 56, column: 1, offset: 1071 } } },
+          { type: 'BlankLine' },
 
           // 27: Paragraph - continuation narrative
-          { type: 'Paragraph', position: { start: { line: 57, column: 1, offset: 1080 }, end: { line: 58, column: 1, offset: 1120 } }, lines: [
+          { type: 'Paragraph', lines: [
             '   Nulla facit exemplaria; specimina tantum hic leguntur,',
             '   textus omnino fictus et vacuus ad usum ostensionis.'
           ]},
 
           // 28: Trailing blank line
-          { type: 'BlankLine', position: { start: { line: 59, column: 1, offset: 1121 }, end: { line: 59, column: 1, offset: 1121 } } }
+          { type: 'BlankLine' }
         ]
       };
       inputEl.value = JSON.stringify(sample, null, 2);
