@@ -11,8 +11,9 @@ import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
 //   "        &continued=1 HTTP/1.1"
 //   "    Host: example.com"
 // Or headers block, blank line, and an indented body block.
-// Be conservative: require a plausible METHOD line and either an HTTP/x token
-// within the first request lines or at least one header-like line after.
+// Be conservative: require a plausible METHOD line and an HTTP/x token
+// within the first request lines (to avoid false positives from narrative
+// paragraphs that contain words followed by a colon, e.g., "clients:").
 // METHOD token pattern: allow standard tchar, but bias toward uppercase letters and hyphens.
 const methodLineRegex = /^\s*[A-Z!#$%&'*+.^_`|~-]+\s+\S.*$/;
 const httpTokenRegex = /\bHTTP\/(?:\d(?:\.\d)?)\b/;
@@ -31,11 +32,15 @@ export const HttpRequestMatcher: BlockMatcher = {
             return false;
         }
 
-        // Look ahead through the contiguous indented group to find evidence
-        // of a real request (HTTP/x token or a header-like line).
+        // Look ahead only a small distance through the contiguous indented group
+        // to find an HTTP/x token as evidence of a real request. Do NOT rely on
+        // header-like lines alone, which can appear in normal prose (e.g., "clients:").
         const base = getIndentation(first);
-        let sawEvidence = httpTokenRegex.test(first);
+        if (httpTokenRegex.test(first)) {
+            return true;
+        }
         let index = 1;
+        let hops = 0;
         while (true) {
             const line = context.peek(index);
             if (line === null || isBlankLine(line)) {
@@ -47,13 +52,17 @@ export const HttpRequestMatcher: BlockMatcher = {
             if (getIndentation(line) < base) {
                 break;
             }
-            if (headerLineRegex.test(line) || httpTokenRegex.test(line)) {
-                sawEvidence = true;
+            // Bound the lookahead to avoid scanning deep into narrative paragraphs
+            hops += 1;
+            if (httpTokenRegex.test(line)) {
+                return true;
+            }
+            if (hops >= 3) {
                 break;
             }
             index += 1;
         }
-        return sawEvidence;
+        return false;
     },
     parse: (context) => {
         const start = makePosition(context.cursor, 0);
