@@ -271,9 +271,11 @@ export const ListMatcher: BlockMatcher = {
                     // paragraph separator; otherwise, do not consume it so that a
                     // BlankLine node can be produced between the list and the next block.
                     const nextIndent = getIndentation(nextNonBlank);
-                    const baseForItem = listBaseIndent ?? item.contentIndent;
-                    const minIndentForContinuation = Math.min(baseForItem, item.contentIndent);
-                    if (nextIndent >= minIndentForContinuation) {
+                    // Continuation paragraphs within a list item must align with
+                    // the item's content column. Do not treat lines indented only
+                    // to the marker/base indent (e.g., narrative paragraphs at 3 spaces)
+                    // as part of the list item.
+                    if (nextIndent >= item.contentIndent) {
                         previousWasBlank = true;
                         paragraphIndent = null;
                         item.lines.push("");
@@ -303,8 +305,7 @@ export const ListMatcher: BlockMatcher = {
                 // After a blank line within the item, allow the next paragraph to start
                 // at a slightly smaller indent (e.g., RFC styles), and keep consuming
                 // lines at that indent as part of the paragraph.
-                const baseForItem = listBaseIndent ?? item.contentIndent;
-                if ((previousWasBlank || paragraphIndent !== null) && contIndent >= Math.min(baseForItem, item.contentIndent)) {
+                if ((previousWasBlank || paragraphIndent !== null) && contIndent >= item.contentIndent) {
                     if (paragraphIndent === null) {
                         paragraphIndent = contIndent;
                     }
