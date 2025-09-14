@@ -41,6 +41,7 @@ export const HttpRequestMatcher: BlockMatcher = {
         }
         let index = 1;
         let hops = 0;
+        const MAX_LOOKAHEAD = 6; // allow deeper wrapped request-target before HTTP token
         while (true) {
             const line = context.peek(index);
             if (line === null || isBlankLine(line)) {
@@ -57,7 +58,7 @@ export const HttpRequestMatcher: BlockMatcher = {
             if (httpTokenRegex.test(line)) {
                 return true;
             }
-            if (hops >= 3) {
+            if (hops >= MAX_LOOKAHEAD) {
                 break;
             }
             index += 1;
