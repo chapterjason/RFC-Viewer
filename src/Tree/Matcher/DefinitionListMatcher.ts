@@ -7,11 +7,18 @@ import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 import {ListMatcher} from "./ListMatcher.js";
 
+// Basic ABNF rule start to avoid misclassifying ABNF as DefinitionList
+const abnfRuleStartRegex = /^\s*[A-Za-z][A-Za-z0-9-]*\s*=\/?\s+.+$/;
+
 function isTermLine(line: string, next: string | null, allowDeep = false): boolean {
     if (line === null || isBlankLine(line)) {
         return false;
     }
     if (next === null || isBlankLine(next)) {
+        return false;
+    }
+    // Avoid ABNF rules like: "b64token    = 1*( ALPHA / DIGIT /" which are not definition terms
+    if (abnfRuleStartRegex.test(line)) {
         return false;
     }
     const termIndent = getIndentation(line);
