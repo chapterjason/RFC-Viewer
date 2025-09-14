@@ -15,14 +15,15 @@ describe('Patch', () => {
 
         // Act: replace the first line
         patch(document, [
-            {op: 'replace', path: '/children/0/lines/0', value: '   Edited first line'},
+            {op: 'replace', path: '/children/0/lines/0', value: 'Edited first line'},
         ]);
 
         // Assert: only the targeted line changed
         const paragraph: any = document.children[0];
         expect(paragraph.type).toBe('Paragraph');
-        expect(paragraph.lines[0]).toBe('   Edited first line');
-        expect(paragraph.lines[1]).toBe('   Second paragraph line');
+        expect(paragraph.indent).toBe(3);
+        expect(paragraph.lines[0]).toBe('Edited first line');
+        expect(paragraph.lines[1]).toBe('Second paragraph line');
 
         // Assert: render round-trip preserves indentation and content
         const rendered = renderDocument(document);
@@ -84,7 +85,8 @@ describe('Patch', () => {
         expect(kindsAfter).toEqual(['Paragraph', 'Paragraph', 'BlankLine', 'Paragraph', 'BlankLine']);
         const firstPara: any = document.children[0];
         expect(firstPara.type).toBe('Paragraph');
-        expect(firstPara.lines[0]).toBe('   C');
+        expect(firstPara.indent).toBe(3);
+        expect(firstPara.lines[0]).toBe('C');
 
         // Assert: render round-trip preserves moved order and indentation
         const rendered = renderDocument(document);

@@ -26,7 +26,9 @@ describe('DefinitionListMatcher - avoid false positive on function call', () => 
 
         // Additional sanity checks on node contents
         const firstParagraph: any = document.children[1];
-        expect(firstParagraph.lines).toEqual(['   window.opener.postMessage(']);
+        expect(firstParagraph.type).toBe('Paragraph');
+        expect(firstParagraph.indent).toBe(3);
+        expect(firstParagraph.lines).toEqual(['window.opener.postMessage(']);
 
         const block: any = document.children[2];
         expect(block.type).toBe('IndentedBlock');
@@ -34,7 +36,8 @@ describe('DefinitionListMatcher - avoid false positive on function call', () => 
         expect(block.lines[0]).toBe(' {');
 
         const closingParagraph: any = document.children[3];
-        expect(closingParagraph.lines).toEqual(['   )']);
+        expect(closingParagraph.type).toBe('Paragraph');
+        expect(closingParagraph.indent).toBe(3);
+        expect(closingParagraph.lines).toEqual([')']);
     });
 });
-

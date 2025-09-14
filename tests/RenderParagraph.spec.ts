@@ -3,10 +3,11 @@ import {renderParagraph} from '../src/Tree/Render/RenderParagraph.js';
 import type {ParagraphNode} from '../src/Tree/Node/ParagraphNode.js';
 
 describe('RenderParagraph', () => {
-    it('preserves paragraph lines exactly', () => {
+    it('re-applies indent to non-blank lines and preserves blanks', () => {
         // Arrange
         const node: ParagraphNode = {
             type: 'Paragraph',
+            indent: 3,
             lines: ['First line', '', 'Third line'],
         };
 
@@ -14,6 +15,6 @@ describe('RenderParagraph', () => {
         const result = renderParagraph(node);
 
         // Assert
-        expect(result).toEqual(['First line', '', 'Third line']);
+        expect(result).toEqual(['   First line', '', '   Third line']);
     });
 });

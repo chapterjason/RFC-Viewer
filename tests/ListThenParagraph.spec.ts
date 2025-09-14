@@ -36,9 +36,10 @@ describe('List followed by narrative paragraph', () => {
         const lastItemText = lastItem.lines.join('\n');
         expect(lastItemText).not.toContain('In any case, the PKCE challenge');
 
-        // Assert: the paragraph node starts with three spaces preserved
+        // Assert: the paragraph node has indent 3 and trimmed lines
         const para: any = doc.children[2];
-        expect(para.lines[0].startsWith('   In any case')).toBe(true);
+        expect(para.type).toBe('Paragraph');
+        expect(para.indent).toBe(3);
+        expect(para.lines[0].startsWith('In any case')).toBe(true);
     });
 });
-
