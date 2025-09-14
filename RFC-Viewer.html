@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AST Text Renderer & Inspector</title>
+  <title>RFC Viewer</title>
   <style>
     :root {
       --bg: #0b0c0f;
@@ -351,25 +351,19 @@
 <body>
   <div class="app" style="grid-template-rows: auto auto 1fr auto; height: 100vh;">
     <header style="gap: 16px; align-items: center;">
-      <h1>AST Text Renderer & Inspector</h1>
-      <div class="left-tools">
-        <button id="btnTypes" title="Show/hide node types">Filter</button>
-      </div>
+      <h1>RFC Viewer</h1>
       <div class="toolbar">
-        <!-- Source: URL first for common case -->
+        <!-- Source: URL input & single URL loader -->
         <div class="tool-group" style="flex: 1 1 auto; min-width: 360px;">
           <input id="urlInput" type="url" placeholder="https://www.rfc-editor.org/rfc/rfc6749.txt" value="https://www.rfc-editor.org/rfc/rfc6749.txt" style="flex: 2 1 640px; min-width: 360px; max-width: 70vw; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: #0c111b; color: var(--text);" />
-          <button id="btnFetchUrl" title="Fetch URL and parse as RFC text">From URL</button>
+          <button id="btnFetchUrl" title="Fetch URL and auto-detect JSON/TXT">From URL</button>
         </div>
-        <!-- Source: local file -->
+        <!-- Hidden file inputs for dropdown actions -->
+        <input id="fileInputJson" type="file" accept=".json,application/json" style="display:none" />
+        <input id="fileInputTxt" type="file" accept=".txt,text/plain" style="display:none" />
+        <!-- Consolidated loader dropdown -->
         <div class="tool-group">
-          <button id="btnOpenFile" title="Select a local file (.txt or .json)">From File</button>
-          <input id="fileInput" type="file" accept=".txt,.json,text/plain,application/json" style="display:none" />
-        </div>
-        <!-- Source: JSON and Clipboard -->
-        <div class="tool-group">
-          <button id="btnOpenJsonDialog" title="Open JSON input form">From JSON</button>
-          <button id="btnFromClipboard" title="Read text from clipboard and parse">From Clipboard</button>
+          <button id="btnLoadFrom" title="Load from...">Load From ▾</button>
         </div>
         <!-- Utilities -->
         <div class="tool-group">
@@ -383,8 +377,20 @@
 
     <div class="layout" id="mainLayout" style="height: 100%; min-height: 0;">
       <div class="panel render-panel" style="border-right: 1px solid var(--border); min-height: 0;">
-        <div class="render-area" id="renderArea" style="height: 100%; min-height: 0;">
-          <pre class="output" id="output"></pre>
+        <div class="details" style="height: 100%; display:flex; flex-direction: column; min-height: 0;">
+          <div class="header">
+            <span class="title">Rendered Output</span>
+            <div style="margin-left: auto; display:flex; gap: 8px;">
+              <button id="btnTypesLocal" title="Show/hide node types">Filter</button>
+              <button id="btnCopyOutputTxt" title="Copy full rendered text output">Copy TXT</button>
+              <button id="btnCopyOutputJson" title="Copy full AST JSON">Copy JSON</button>
+            </div>
+          </div>
+          <div class="content" style="padding: 0; min-height: 0;">
+            <div class="render-area" id="renderArea" style="height: 100%; min-height: 0;">
+              <pre class="output" id="output"></pre>
+            </div>
+          </div>
         </div>
       </div>
       <div class="splitter" id="splitter" aria-label="Resize panels" role="separator" aria-orientation="vertical" tabindex="0"></div>
@@ -394,6 +400,8 @@
             <span class="title">Selected Node(s)</span>
             <span id="selInfo" class="muted"></span>
             <div style="margin-left: auto; display:flex; gap: 8px;">
+              <button id="btnCopySelectionTxt" title="Copy rendered text for selected node(s)" disabled>Copy TXT</button>
+              <button id="btnCopySelectionJson" title="Copy JSON for selected node(s)" disabled>Copy JSON</button>
               <button id="btnClearSelection">Clear Selection</button>
             </div>
           </div>
@@ -433,6 +441,21 @@
     <div id="typesList" class="list"></div>
   </div>
 
+  <!-- Load From Popover -->
+  <div id="loadPopover" class="types-popover" role="menu" aria-label="Load From" aria-modal="false">
+    <header><span class="title">Load From</span></header>
+    <div class="controls" style="display:none"></div>
+    <!-- Intentionally no search/filter input -->
+    <div class="list" id="loadList" style="max-height: 50vh; overflow: auto;">
+      <label class="item"><button id="menuJsonDialog" class="btn" style="width:100%; text-align:left;">JSON</button></label>
+      <label class="item"><button id="menuTxtDialog" class="btn" style="width:100%; text-align:left;">TXT</button></label>
+      <label class="item"><button id="menuJsonClipboard" class="btn" style="width:100%; text-align:left;">JSON-Clipboard</button></label>
+      <label class="item"><button id="menuTxtClipboard" class="btn" style="width:100%; text-align:left;">TXT-Clipboard</button></label>
+      <label class="item"><button id="menuJsonFile" class="btn" style="width:100%; text-align:left;">JSON File</button></label>
+      <label class="item"><button id="menuTxtFile" class="btn" style="width:100%; text-align:left;">TXT File</button></label>
+    </div>
+  </div>
+
   <!-- JSON Input Dialog -->
   <dialog id="jsonDialog" style="border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 0; border-radius: 8px; width: min(960px, 92vw);">
     <form method="dialog" style="display:flex; flex-direction: column; max-height: 80vh;">
@@ -451,8 +474,27 @@
     </form>
   </dialog>
 
+  <!-- TXT Input Dialog -->
+  <dialog id="txtDialog" style="border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 0; border-radius: 8px; width: min(960px, 92vw);">
+    <form method="dialog" style="display:flex; flex-direction: column; max-height: 80vh;">
+      <header style="display:flex; align-items:center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #0f1320;">
+        <strong style="font-size: 12px;">Paste RFC Text</strong>
+        <small class="muted">Paste plain RFC-like text</small>
+      </header>
+      <div style="padding: 8px 12px; display:flex; flex-direction: column; gap: 8px;">
+        <label for="inputTxt" class="muted">RFC TXT</label>
+        <textarea id="inputTxt" rows="12" placeholder="Paste RFC text here" style="width: 100%; box-sizing: border-box; resize: vertical; outline: none; border: 1px solid var(--border); background: #0c111b; color: var(--text); padding: 12px; font-size: var(--code-size); line-height: 1.6; border-radius: 8px; tab-size: 4;"></textarea>
+      </div>
+      <footer style="display:flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); background: #0f1320;">
+        <button value="cancel">Cancel</button>
+        <button id="btnDialogLoadTxt" value="default">Load</button>
+      </footer>
+    </form>
+  </dialog>
+
   <script type="module">
     import { renderNode } from './dist/Tree/Render/RenderNode.js';
+    import { renderToString } from './dist/Tree/Render/RenderToString.js';
     import { parse } from './dist/Tree/Parser.js';
     import { ArrayCursor } from './dist/Utils/ArrayCursor.js';
 
@@ -467,7 +509,6 @@
     const validationContentEl = document.getElementById('validationContent');
     const typesPopover = document.getElementById('typesPopover');
     const typesListEl = document.getElementById('typesList');
-    const btnTypes = document.getElementById('btnTypes');
     const btnTypesAll = document.getElementById('btnTypesAll');
     const btnTypesNone = document.getElementById('btnTypesNone');
     const typesFilterEl = document.getElementById('typesFilter');
@@ -478,17 +519,32 @@
     const btnSample = document.getElementById('btnSample');
     const btnClear = document.getElementById('btnClear');
     const btnClearSelection = document.getElementById('btnClearSelection');
+    const btnCopySelectionTxt = document.getElementById('btnCopySelectionTxt');
+    const btnCopySelectionJson = document.getElementById('btnCopySelectionJson');
+    const btnCopyOutputTxt = document.getElementById('btnCopyOutputTxt');
+    const btnCopyOutputJson = document.getElementById('btnCopyOutputJson');
+    const btnTypesLocal = document.getElementById('btnTypesLocal');
     const urlInput = document.getElementById('urlInput');
     const btnFetchUrl = document.getElementById('btnFetchUrl');
-    const btnOpenFile = document.getElementById('btnOpenFile');
-    const fileInput = document.getElementById('fileInput');
+    const btnLoadFrom = document.getElementById('btnLoadFrom');
+    const fileInputJson = document.getElementById('fileInputJson');
+    const fileInputTxt = document.getElementById('fileInputTxt');
     const layoutEl = document.getElementById('mainLayout');
     const renderAreaEl = document.getElementById('renderArea');
     const splitterEl = document.getElementById('splitter');
-    const btnFromClipboard = document.getElementById('btnFromClipboard');
     const btnOpenJsonDialog = document.getElementById('btnOpenJsonDialog');
     const jsonDialog = document.getElementById('jsonDialog');
+    const txtDialog = document.getElementById('txtDialog');
     const btnDialogLoad = document.getElementById('btnDialogLoad');
+    const btnDialogLoadTxt = document.getElementById('btnDialogLoadTxt');
+    const inputTxtEl = document.getElementById('inputTxt');
+    const loadPopover = document.getElementById('loadPopover');
+    const menuJsonDialog = document.getElementById('menuJsonDialog');
+    const menuTxtDialog = document.getElementById('menuTxtDialog');
+    const menuJsonClipboard = document.getElementById('menuJsonClipboard');
+    const menuTxtClipboard = document.getElementById('menuTxtClipboard');
+    const menuJsonFile = document.getElementById('menuJsonFile');
+    const menuTxtFile = document.getElementById('menuTxtFile');
 
     let currentAst = null;
     let nodeMap = new Map(); // nodeId -> node
@@ -535,6 +591,15 @@
       // Auto-scroll to bottom when open
       if (logPanelEl.open) { statusLogEl.scrollTop = statusLogEl.scrollHeight; }
     }
+    // Initialize header controls as disabled until content renders
+    try {
+      if (btnTypesLocal) { btnTypesLocal.disabled = true; }
+      if (btnCopyOutputTxt) { btnCopyOutputTxt.disabled = true; }
+      if (btnCopyOutputJson) { btnCopyOutputJson.disabled = true; }
+      if (btnCopySelectionTxt) { btnCopySelectionTxt.disabled = true; }
+      if (btnCopySelectionJson) { btnCopySelectionJson.disabled = true; }
+      if (btnClearSelection) { btnClearSelection.disabled = true; }
+    } catch (_) {}
     function recordStatus(text, isError, isLoading) {
       const nowDate = new Date();
       const nowClock = formatClock(nowDate);
@@ -591,6 +656,15 @@
       selectionAnchorId = null;
       try { nodeEditor.value = ''; nodeEditor.disabled = true; } catch (_) {}
       selInfoEl.textContent = '';
+      try {
+        if (btnCopySelectionTxt) { btnCopySelectionTxt.disabled = true; }
+        if (btnCopySelectionJson) { btnCopySelectionJson.disabled = true; }
+        if (btnClearSelection) { btnClearSelection.disabled = true; }
+        if (btnTypesLocal) { btnTypesLocal.disabled = true; }
+        if (btnCopyOutputTxt) { btnCopyOutputTxt.disabled = true; }
+        if (btnCopyOutputJson) { btnCopyOutputJson.disabled = true; }
+      } catch (_) {}
+      try { if (typeof closeTypesPopover === 'function') { closeTypesPopover(); } } catch (_) {}
     }
 
     function makeNodeId(node, index) {
@@ -682,8 +756,10 @@
     }
 
     // Types popover helpers
+    let typesAnchorButton = null; // last button that opened the popover
     function positionTypesPopover() {
-      const btn = btnTypes;
+      const btn = typesAnchorButton;
+      if (!btn) { return; }
       const pop = typesPopover;
       const rect = btn.getBoundingClientRect();
       const scrollX = window.scrollX || window.pageXOffset;
@@ -693,7 +769,9 @@
       pop.style.left = left + 'px';
       pop.style.top = top + 'px';
     }
-    function openTypesPopover() {
+    function openTypesPopover(anchorBtn) {
+      typesAnchorButton = anchorBtn || null;
+      if (!typesAnchorButton) { return; }
       typesPopover.classList.add('open');
       positionTypesPopover();
       typesFilterEl.value = '';
@@ -711,7 +789,7 @@
     function onDocClickCloseTypes(e) {
       if (!typesPopover.classList.contains('open')) { return; }
       const target = e.target;
-      if (target === btnTypes || btnTypes.contains(target)) { return; }
+      if (btnTypesLocal && (target === btnTypesLocal || (btnTypesLocal.contains && btnTypesLocal.contains(target)))) { return; }
       if (typesPopover.contains(target)) { return; }
       closeTypesPopover();
     }
@@ -806,6 +884,11 @@
       if (selectedNodeIds.size === 0) {
         try { nodeEditor.value = ''; nodeEditor.disabled = true; } catch (_) {}
         selInfoEl.textContent = '';
+        try {
+          if (btnCopySelectionTxt) { btnCopySelectionTxt.disabled = true; }
+          if (btnCopySelectionJson) { btnCopySelectionJson.disabled = true; }
+          if (btnClearSelection) { btnClearSelection.disabled = true; }
+        } catch (_) {}
         return;
       }
       if (selectedNodeIds.size === 1) {
@@ -821,6 +904,11 @@
           selInfoEl.textContent = `${node.type}`;
           ensureSelectedVisible(false);
         }
+        try {
+          if (btnCopySelectionTxt) { btnCopySelectionTxt.disabled = false; }
+          if (btnCopySelectionJson) { btnCopySelectionJson.disabled = false; }
+          if (btnClearSelection) { btnClearSelection.disabled = false; }
+        } catch (_) {}
         return;
       }
       const nodes = [];
@@ -837,6 +925,29 @@
         }
       } catch (_) {}
       selInfoEl.textContent = `${nodes.length} selected`;
+      try {
+        if (btnCopySelectionTxt) { btnCopySelectionTxt.disabled = false; }
+        if (btnCopySelectionJson) { btnCopySelectionJson.disabled = false; }
+        if (btnClearSelection) { btnClearSelection.disabled = false; }
+      } catch (_) {}
+    }
+
+    function getSelectedRenderedText() {
+      if (!currentAst) { return ''; }
+      if (selectedNodeIds.size === 0) { return ''; }
+      const selectedIdsInOrder = nodeOrder.filter((id) => selectedNodeIds.has(id));
+      const parts = [];
+      for (const id of selectedIdsInOrder) {
+        const node = nodeMap.get(id);
+        if (!node) { continue; }
+        try {
+          const lines = renderNode(node) || [];
+          parts.push(lines.join('\n'));
+        } catch (_) {
+          // Skip nodes that fail to render
+        }
+      }
+      return parts.join('\n');
     }
 
     // Apply edits from the right-panel editor to the current AST and re-render
@@ -1200,6 +1311,13 @@
       // Validate after initial render
       validateDocument();
       setStatus('Rendered ' + totalLines + ' lines.');
+      // Enable header controls only when content exists
+      const hasContent = totalLines > 0;
+      try {
+        if (btnTypesLocal) { btnTypesLocal.disabled = !hasContent; }
+        if (btnCopyOutputTxt) { btnCopyOutputTxt.disabled = !hasContent; }
+        if (btnCopyOutputJson) { btnCopyOutputJson.disabled = !hasContent; }
+      } catch (_) {}
     }
 
     function updateCollapseStates() {
@@ -1210,12 +1328,27 @@
       }
     }
 
-    function parseAndRender() {
+    function parseAndRenderJson(jsonText) {
       try {
         setStatus('Parsing JSON...', false, true);
-        const text = inputEl.value.trim();
+        const text = (jsonText != null ? String(jsonText) : '').trim();
         if (!text) { clearRender(); setStatus('No input'); return; }
         const ast = JSON.parse(text);
+        renderAst(ast);
+      } catch (e) {
+        clearRender();
+        setStatus('Parse error: ' + (e && e.message ? e.message : String(e)), true, false);
+      }
+    }
+
+    function parseAndRenderTxt(txt) {
+      try {
+        setStatus('Parsing text...', false, true);
+        const text = (txt != null ? String(txt) : '');
+        if (!text) { clearRender(); setStatus('No input'); return; }
+        const normalized = text.replace(/\r?\n/g, '\n').split('\n');
+        const cursor = new ArrayCursor(normalized);
+        const ast = parse(cursor);
         renderAst(ast);
       } catch (e) {
         clearRender();
@@ -1395,50 +1528,46 @@
       return 'https://no-cors.w-ixx.de/?url=' + encodeURIComponent(url);
     }
 
-    async function fetchUrlAndParse(url) {
-      if (!url) { setStatus('Enter a URL to fetch'); return; }
-      try { btnFetchUrl.disabled = true; } catch (_) {}
-      btnFetchUrl.classList.add('loading');
-      try {
-        const effectiveUrl = toCorsProxy(url);
-        setStatus('Fetching: ' + effectiveUrl, false, true);
-        const response = await fetch(effectiveUrl, { headers: { 'Accept': 'text/plain, */*;q=0.1' } });
-        if (!response.ok) {
-          throw new Error('HTTP ' + response.status + ' ' + response.statusText);
-        }
-        const raw = await response.text();
-        setStatus('Parsing text...', false, true);
-        const normalized = raw.replace(/\r?\n/g, '\n').split('\n');
-        const cursor = new ArrayCursor(normalized);
-        const ast = parse(cursor);
-        const json = JSON.stringify(ast, null, 2);
-        if (json.length <= MAX_INPUT_PREVIEW_BYTES) {
-          inputEl.value = json;
-        } else {
-          inputEl.value = '';
-        }
-        renderAst(ast);
-        const lineCount = document.querySelectorAll('.output .line').length;
-        setStatus('Fetched and parsed. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
-      } catch (error) {
-        const message = (error && error.message) ? error.message : String(error);
-        setStatus('Fetch/parse error: ' + message, true, false);
-      } finally {
-        btnFetchUrl.classList.remove('loading');
-        try { btnFetchUrl.disabled = false; } catch (_) {}
+    async function fetchUrlText(url) {
+      if (!url) { throw new Error('Enter a URL to fetch'); }
+      const effectiveUrl = toCorsProxy(url);
+      setStatus('Fetching: ' + effectiveUrl, false, true);
+      const response = await fetch(effectiveUrl, { headers: { 'Accept': 'text/plain, */*;q=0.1' } });
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status + ' ' + response.statusText);
       }
+      return await response.text();
     }
 
-    btnClear.addEventListener('click', () => { inputEl.value = ''; clearRender(); setStatus('Cleared', false, false); });
+    btnClear.addEventListener('click', () => { clearRender(); setStatus('Cleared', false, false); });
     btnClearSelection.addEventListener('click', () => { clearSelection(); });
-    btnFetchUrl.addEventListener('click', () => { if (!btnFetchUrl.disabled) { fetchUrlAndParse(urlInput.value.trim()); } });
-    urlInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); if (!btnFetchUrl.disabled) { fetchUrlAndParse(urlInput.value.trim()); } }
-    });
+    if (btnFetchUrl) {
+      btnFetchUrl.addEventListener('click', async () => {
+        const url = urlInput.value.trim();
+        if (!url) { setStatus('Enter a URL to fetch'); return; }
+        try { btnFetchUrl.disabled = true; } catch (_) {}
+        btnFetchUrl.classList.add('loading');
+        try {
+          const raw = await fetchUrlText(url);
+          const lower = url.toLowerCase();
+          if (lower.endsWith('.json')) { parseAndRenderJson(raw); } else { parseAndRenderTxt(raw); }
+        } catch (error) {
+          setStatus('Fetch/parse error: ' + ((error && error.message) ? error.message : String(error)), true, false);
+        } finally {
+          btnFetchUrl.classList.remove('loading');
+          try { btnFetchUrl.disabled = false; } catch (_) {}
+        }
+      });
+      urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); if (!btnFetchUrl.disabled) { btnFetchUrl.click(); } }
+      });
+    }
     // Types popover events
-    btnTypes.addEventListener('click', () => {
-      if (typesPopover.classList.contains('open')) { closeTypesPopover(); } else { openTypesPopover(); }
-    });
+    if (btnTypesLocal) {
+      btnTypesLocal.addEventListener('click', () => {
+        if (typesPopover.classList.contains('open') && typesAnchorButton === btnTypesLocal) { closeTypesPopover(); } else { openTypesPopover(btnTypesLocal); }
+      });
+    }
     btnTypesAll.addEventListener('click', () => {
       for (const type of KNOWN_TYPES) {
         if (document.body.classList.contains('type-visible-' + type)) { continue; }
@@ -1466,62 +1595,121 @@
       clearTimeout(typesFilterTimer);
       typesFilterTimer = window.setTimeout(() => { filterTypes(value); }, 120);
     });
-    btnOpenFile.addEventListener('click', () => { fileInput.click(); });
-    fileInput.addEventListener('change', async () => {
-      const files = fileInput.files;
-      if (!files || files.length === 0) { return; }
-      const file = files[0];
-      await handleLocalFile(file);
-      // reset to allow re-selecting the same file
-      fileInput.value = '';
-    });
+    // Local file: JSON
+    if (fileInputJson) {
+      fileInputJson.addEventListener('change', async () => {
+        const files = fileInputJson.files;
+        if (!files || files.length === 0) { return; }
+        const file = files[0];
+        await handleLocalJsonFile(file);
+        fileInputJson.value = '';
+      });
+    }
+    // Local file: TXT
+    if (fileInputTxt) {
+      fileInputTxt.addEventListener('change', async () => {
+        const files = fileInputTxt.files;
+        if (!files || files.length === 0) { return; }
+        const file = files[0];
+        await handleLocalTxtFile(file);
+        fileInputTxt.value = '';
+      });
+    }
+    // Load From dropdown
+    let loadAnchorButton = null;
+    function positionLoadPopover() {
+      if (!loadAnchorButton) { return; }
+      const pop = loadPopover;
+      const rect = loadAnchorButton.getBoundingClientRect();
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
+      const left = Math.min(rect.left + scrollX, (window.innerWidth + scrollX) - pop.offsetWidth - 12);
+      const top = rect.bottom + scrollY + 6;
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+    }
+    function openLoadPopover(anchorBtn) {
+      loadAnchorButton = anchorBtn || null;
+      if (!loadAnchorButton) { return; }
+      loadPopover.classList.add('open');
+      positionLoadPopover();
+      document.addEventListener('click', onDocClickCloseLoad, true);
+      window.addEventListener('resize', positionLoadPopover);
+      window.addEventListener('scroll', positionLoadPopover, true);
+    }
+    function closeLoadPopover() {
+      loadPopover.classList.remove('open');
+      document.removeEventListener('click', onDocClickCloseLoad, true);
+      window.removeEventListener('resize', positionLoadPopover);
+      window.removeEventListener('scroll', positionLoadPopover, true);
+    }
+    function onDocClickCloseLoad(e) {
+      if (!loadPopover.classList.contains('open')) { return; }
+      const target = e.target;
+      if (target === btnLoadFrom || (btnLoadFrom && btnLoadFrom.contains && btnLoadFrom.contains(target))) { return; }
+      if (loadPopover.contains(target)) { return; }
+      closeLoadPopover();
+    }
+    if (btnLoadFrom) {
+      btnLoadFrom.addEventListener('click', () => {
+        if (loadPopover.classList.contains('open')) { closeLoadPopover(); } else { openLoadPopover(btnLoadFrom); }
+      });
+    }
+    // No search input in Load From popover per request
 
-    // Clipboard input
-    btnFromClipboard.addEventListener('click', async () => {
-      try {
-        setStatus('Reading from clipboard...', false, true);
-        let text = '';
+    // Clipboard input: JSON (menu)
+    if (menuJsonClipboard) {
+      menuJsonClipboard.addEventListener('click', async () => {
         try {
-          text = await navigator.clipboard.readText();
-        } catch (err) {
-          const pasted = window.prompt('Paste RFC text or AST JSON here:');
-          text = pasted || '';
-        }
-        if (!text) { setStatus('Clipboard is empty', false, false); return; }
-        const looksJson = /^[\s\uFEFF\u200B]*[\[{]/.test(text);
-        if (looksJson) {
-          const ast = JSON.parse(text);
-          const json = JSON.stringify(ast, null, 2);
-          if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
-          renderAst(ast);
+          setStatus('Reading JSON from clipboard...', false, true);
+          let text = '';
+          try { text = await navigator.clipboard.readText(); }
+          catch (_) { text = window.prompt('Paste AST JSON here:') || ''; }
+          if (!text) { setStatus('Clipboard is empty', false, false); return; }
+          parseAndRenderJson(text);
           setStatus('Loaded AST from clipboard', false, false);
-          return;
+        } catch (error) {
+          setStatus('Clipboard error: ' + (error && error.message ? error.message : String(error)), true, false);
         }
-        const normalized = text.replace(/\r?\n/g, '\n').split('\n');
-        const cursor = new ArrayCursor(normalized);
-        const ast = parse(cursor);
-        const json = JSON.stringify(ast, null, 2);
-        if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
-        renderAst(ast);
-        setStatus('Parsed clipboard text', false, false);
-      } catch (error) {
-        setStatus('Clipboard error: ' + (error && error.message ? error.message : String(error)), true, false);
-      }
-    });
+      });
+    }
+    // Clipboard input: TXT (menu)
+    if (menuTxtClipboard) {
+      menuTxtClipboard.addEventListener('click', async () => {
+        try {
+          setStatus('Reading text from clipboard...', false, true);
+          let text = '';
+          try { text = await navigator.clipboard.readText(); }
+          catch (_) { text = window.prompt('Paste RFC text here:') || ''; }
+          if (!text) { setStatus('Clipboard is empty', false, false); return; }
+          parseAndRenderTxt(text);
+          setStatus('Parsed clipboard text', false, false);
+        } catch (error) {
+          setStatus('Clipboard error: ' + (error && error.message ? error.message : String(error)), true, false);
+        }
+      });
+    }
 
-    // JSON dialog
-    btnOpenJsonDialog.addEventListener('click', () => {
+    // Dialog openers via menu
+    if (menuJsonDialog) { menuJsonDialog.addEventListener('click', () => { try { jsonDialog.showModal(); } catch (_) { jsonDialog.show(); } closeLoadPopover(); }); }
+    if (menuTxtDialog) { menuTxtDialog.addEventListener('click', () => { if (inputTxtEl) { inputTxtEl.value = ''; } try { txtDialog.showModal(); } catch (_) { txtDialog.show(); } closeLoadPopover(); }); }
+    if (menuJsonFile) { menuJsonFile.addEventListener('click', () => { if (fileInputJson) { fileInputJson.click(); } closeLoadPopover(); }); }
+    if (menuTxtFile) { menuTxtFile.addEventListener('click', () => { if (fileInputTxt) { fileInputTxt.click(); } closeLoadPopover(); }); }
+    /* old file and clipboard handlers removed in favor of JSON/TXT-specific variants */
+
+    // JSON dialog (optional separate button)
+    if (btnOpenJsonDialog) { btnOpenJsonDialog.addEventListener('click', () => {
       // Do not prefill with current AST; start empty to load from
       inputEl.value = '';
       try { jsonDialog.showModal(); } catch (_) { jsonDialog.show(); }
-    });
+    }); }
     btnDialogLoad.addEventListener('click', (e) => {
       e.preventDefault();
       setStatus('Loading JSON...', false, true);
       try { btnDialogLoad.disabled = true; } catch (_) {}
       btnDialogLoad.classList.add('loading');
       try {
-        parseAndRender();
+        parseAndRenderJson(inputEl.value);
       } finally {
         btnDialogLoad.classList.remove('loading');
         try { btnDialogLoad.disabled = false; } catch (_) {}
@@ -1538,30 +1726,49 @@
       if (!inDialog) { try { jsonDialog.close(); } catch (_) {} }
     });
 
-    async function handleLocalFile(file) {
+    // TXT dialog
+    btnDialogLoadTxt.addEventListener('click', (e) => {
+      e.preventDefault();
+      setStatus('Loading TXT...', false, true);
+      try { btnDialogLoadTxt.disabled = true; } catch (_) {}
+      btnDialogLoadTxt.classList.add('loading');
+      try {
+        parseAndRenderTxt(inputTxtEl ? inputTxtEl.value : '');
+      } finally {
+        btnDialogLoadTxt.classList.remove('loading');
+        try { btnDialogLoadTxt.disabled = false; } catch (_) {}
+        try { txtDialog.close(); } catch (_) {}
+      }
+    });
+    txtDialog.addEventListener('click', (e) => {
+      const x = (e && typeof e.clientX === 'number') ? e.clientX : null;
+      const y = (e && typeof e.clientY === 'number') ? e.clientY : null;
+      if (x == null || y == null) { return; }
+      const rect = txtDialog.getBoundingClientRect();
+      const inDialog = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      if (!inDialog) { try { txtDialog.close(); } catch (_) {} }
+    });
+
+    async function handleLocalJsonFile(file) {
       try {
         setStatus('Reading file: ' + file.name, false, true);
         const text = await file.text();
-        const lower = file.name.toLowerCase();
-        if (lower.endsWith('.json')) {
-          setStatus('Parsing JSON AST...', false, true);
-          const ast = JSON.parse(text);
-          const json = JSON.stringify(ast, null, 2);
-          if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
-          renderAst(ast);
-          const lineCount = document.querySelectorAll('.output .line').length;
-          setStatus('Loaded JSON. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
-          return;
-        }
-        setStatus('Parsing text via project parser...', false, true);
-        const normalized = text.replace(/\r?\n/g, '\n').split('\n');
-        const cursor = new ArrayCursor(normalized);
-        const ast = parse(cursor);
-        const json = JSON.stringify(ast, null, 2);
-        if (json.length <= MAX_INPUT_PREVIEW_BYTES) { inputEl.value = json; } else { inputEl.value = ''; }
+        setStatus('Parsing JSON AST...', false, true);
+        const ast = JSON.parse(text);
         renderAst(ast);
         const lineCount = document.querySelectorAll('.output .line').length;
-        setStatus('Loaded text file. Lines: ' + lineCount + (json.length > MAX_INPUT_PREVIEW_BYTES ? ' (AST JSON omitted from input)' : ''), false, false);
+        setStatus('Loaded JSON. Lines: ' + lineCount, false, false);
+      } catch (error) {
+        setStatus('File load/parse error: ' + (error && error.message ? error.message : String(error)), true, false);
+      }
+    }
+    async function handleLocalTxtFile(file) {
+      try {
+        setStatus('Reading file: ' + file.name, false, true);
+        const text = await file.text();
+        parseAndRenderTxt(text);
+        const lineCount = document.querySelectorAll('.output .line').length;
+        setStatus('Loaded text file. Lines: ' + lineCount, false, false);
       } catch (error) {
         setStatus('File load/parse error: ' + (error && error.message ? error.message : String(error)), true, false);
       }
@@ -1576,177 +1783,128 @@
     window.addEventListener('touchcancel', endDrag);
     btnSample.addEventListener('click', () => {
       setStatus('Loading sample...', false, true);
-      // RFC-like sample focusing on the Abstract section and realistic header
-      const sample = {
-        type: 'Document',
-        children: [
-          // 0: Leading blank line
-          { type: 'BlankLine' },
 
-          // 1: Metadata
-          { type: 'Metadata', lines: [
-            'Interdum Egestas Typographi Factus (IETF)                  D. Ipsum, Ed.',
-            'Rogatio Commentariorum: 9999                                  Lorum Corp',
-            'Categoria: Specimen Tractus'
-          ]},
+      const sample = "\n\n\n\n\n\n" +
+          "Independent Submission                                      J. Schilling\n" +
+          "Request for Comments: 9999                               Example Company\n" +
+          "Category: Example                                         September 2025\n" +
+          "\n" +
+          "                 Lorem Ipsum Dolor Sit Amet\n" +
+          "\n" +
+          "Abstract\n" +
+          "\n" +
+          "   Tenetur Habitasse Ipsum Sollicitudin Inceptos Sapien\n" +
+          "   Aenean Nascetur Eleifend Xiphoides Amet Magnis Posuere Lorem Elit\n" +
+          "   Tellus Egestas Xiphos Tristique\n" +
+          "\n" +
+          "Table of Contents\n" +
+          "\n" +
+          "   1. Lorem Ipsum .....................................................4\n" +
+          "     1.1. Dolor Sit ...................................................6\n" +
+          "   2. Amet Consectetur\n" +
+          "     .................................................................10\n" +
+          "\n" +
+          "Notation and Conventions\n" +
+          "\n" +
+          "   Lorum Nomen\n" +
+          "      Inanis descriptio de rebus fictis et vacuis.\n" +
+          "   Ipsum Signum\n" +
+          "      Nugae sine sensu ad specimen textus implendum.\n" +
+          "\n" +
+          "   - Lorum\n" +
+          "   - Ipsum\n" +
+          "   - Dolor\n" +
+          "\n" +
+          "    Lorem ipsum dolor sit amet, consectetur\n" +
+          "    adipiscing elit, sed do eiusmod tempor\n" +
+          "    incididunt ut labore et dolore magna.\n" +
+          "\n" +
+          "   +--------+                               +---------------+\n" +
+          "   |        |--(A)- Inanis Nexus ---------> |   Exemplum    |\n" +
+          "   | Lorum  |                               |     Ipsum     |\n" +
+          "   |        |<-(B)-- Vacuus Rivus --------- |               |\n" +
+          "   +--------+                               +---------------+\n" +
+          "\n" +
+          "            Figure 1: Exemplum Textus (specimen)\n" +
+          "\n" +
+          "Lorum                         Specimen Series                   [Page 1]\n" +
+          "\f\n" +
+          "RFC 9999                    Lorem Ipsum Dolor Sit Amet\n" +
+          "\n" +
+          "   Nulla facit exemplaria; specimina tantum hic leguntur,\n" +
+          "   textus omnino fictus et vacuus ad usum ostensionis.\n";
 
-          // 2: Blank line before title
-          { type: 'BlankLine' },
-
-          // 3: Title
-          { type: 'Title', lines: [
-            '                 Lorem Ipsum Dolor Sit Amet'
-          ]},
-
-          // 4: Blank line
-          { type: 'BlankLine' },
-
-          // 5: SectionTitle - Abstract
-          { type: 'SectionTitle', lines: [
-            'Abstract'
-          ]},
-
-          // 6: Blank line
-          { type: 'BlankLine' },
-
-          // 7: Paragraph - abstract body (acrostic: "THIS IS AN EXAMPLE TEXT")
-          { type: 'Paragraph', lines: [
-            '   Tenetur Habitasse Ipsum Sollicitudin Inceptos Sapien',
-            '   Aenean Nascetur Eleifend Xiphoides Amet Magnis Posuere Lorem Elit',
-            '   Tellus Egestas Xiphos Tristique'
-          ]},
-
-          // 8: Blank line
-          { type: 'BlankLine' },
-
-          // 9: SectionTitle - Table of Contents
-          { type: 'SectionTitle', lines: [
-            'Table of Contents'
-          ]},
-
-          // 10: Blank line
-          { type: 'BlankLine' },
-
-          // 11: TableOfContents - two entries (one simple, one wrapped)
-            {
-                "type": "TableOfContents",
-                "lines": [
-                    "   1. Lorem Ipsum .....................................................4",
-                    "     1.1. Dolor Sit ...................................................6",
-                    "   2. Amet Consectetur",
-                    "     .................................................................10"
-                ],
-                "entries": [
-                    {
-                        "raw": "   1. Lorem Ipsum .....................................................4",
-                        "indent": 3,
-                        "title": "1. Lorem Ipsum",
-                        "page": 4
-                    },
-                    {
-                        "raw": "     1.1. Dolor Sit ...................................................6",
-                        "indent": 5,
-                        "title": "1.1. Dolor Sit",
-                        "page": 6
-                    },
-                    {
-                        "raw": "   2. Amet Consectetur\n     .................................................................10",
-                        "indent": 3,
-                        "title": "2. Amet Consectetur",
-                        "page": 10
-                    }
-                ]
-            },
-
-          // 12: Blank line
-          { type: 'BlankLine' },
-
-          // 13: SectionTitle - Notation and Conventions
-          { type: 'SectionTitle', lines: [
-            'Notation and Conventions'
-          ]},
-
-          // 14: Blank line
-          { type: 'BlankLine' },
-
-          // 15: DefinitionList - terms with definitions
-          { type: 'DefinitionList', items: [
-            { term: 'Lorum Nomen', termIndent: 3, definitionIndent: 6, lines: [
-              'Inanis descriptio de rebus fictis et vacuis.',
-            ]},
-            { term: 'Ipsum Signum', termIndent: 3, definitionIndent: 6, lines: [
-              'Nugae sine sensu ad specimen textus implendum.',
-            ]}
-          ]},
-
-          // 16: Blank line
-          { type: 'BlankLine' },
-
-          // 17: List - unordered list of grant types (with wrapped content)
-          { type: 'List', items: [
-            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
-              'Lorum',
-            ]},
-            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
-              'Ipsum',
-            ]},
-            { marker: '-', markerIndent: 3, contentIndent: 5, lines: [
-              'Dolor',
-            ]}
-          ]},
-
-          // 18: Blank line
-          { type: 'BlankLine' },
-
-          // 19: IndentedBlock - HTTP request example
-          { type: 'IndentedBlock', indent: 4, lines: [
-            'Lorem ipsum dolor sit amet, consectetur',
-            'adipiscing elit, sed do eiusmod tempor',
-            'incididunt ut labore et dolore magna.'
-          ]},
-
-          // 20: Blank line
-          { type: 'BlankLine' },
-
-          // 21: Figure - ASCII diagram with caption
-          { type: 'Figure', lines: [
-            '   +--------+                               +---------------+',
-            '   |        |--(A)- Inanis Nexus ---------> |   Exemplum    |',
-            '   | Lorum  |                               |     Ipsum     |',
-            '   |        |<-(B)-- Vacuus Rivus --------- |               |',
-            '   +--------+                               +---------------+',
-            '',
-            '            Figure 1: Exemplum Textus (specimen)'
-          ]},
-
-          // 22: Blank line
-          { type: 'BlankLine' },
-
-          // 23: PageFooter before a page break
-          { type: 'PageFooter', text: 'Lorum                         Specimen Series                   [Page 1]' },
-
-          // 24: PageBreak (form feed)
-          { type: 'PageBreak' },
-
-          // 25: PageHeader after page break
-          { type: 'PageHeader', text: 'RFC 9999                    Lorem Ipsum Dolor Sit Amet' },
-
-          // 26: Blank line
-          { type: 'BlankLine' },
-
-          // 27: Paragraph - continuation narrative
-          { type: 'Paragraph', lines: [
-            '   Nulla facit exemplaria; specimina tantum hic leguntur,',
-            '   textus omnino fictus et vacuus ad usum ostensionis.'
-          ]},
-
-          // 28: Trailing blank line
-          { type: 'BlankLine' }
-        ]
-      };
-      inputEl.value = JSON.stringify(sample, null, 2);
-      parseAndRender();
+      parseAndRenderTxt(sample);
     });
+
+    // Copy: selected node(s) TXT
+    if (btnCopySelectionTxt) {
+      btnCopySelectionTxt.addEventListener('click', async () => {
+        try {
+          setStatus('Copying selection...', false, true);
+          const text = getSelectedRenderedText();
+          if (!text) { setStatus('No selection to copy', true, false); return; }
+          try {
+            await navigator.clipboard.writeText(text);
+            const lineCount = text.split('\n').length;
+            setStatus(`Copied selection (${lineCount} line${lineCount !== 1 ? 's' : ''})`);
+          } catch (error) {
+            setStatus('Copy failed: ' + (error && error.message ? error.message : String(error)), true, false);
+          }
+        } catch (error) {
+          setStatus('Copy failed: ' + (error && error.message ? error.message : String(error)), true, false);
+        }
+      });
+    }
+
+    // Copy: selected node(s) JSON
+    if (btnCopySelectionJson) {
+      btnCopySelectionJson.addEventListener('click', async () => {
+        try {
+          if (selectedNodeIds.size === 0) { setStatus('No selection to copy', true, false); return; }
+          setStatus('Copying selection JSON...', false, true);
+          const jsonText = (nodeEditor && !nodeEditor.disabled) ? (nodeEditor.value || '') : '';
+          if (!jsonText) { setStatus('Editor is empty', true, false); return; }
+          await navigator.clipboard.writeText(jsonText);
+          setStatus('Copied selection JSON');
+        } catch (error) {
+          setStatus('Copy failed: ' + (error && error.message ? error.message : String(error)), true, false);
+        }
+      });
+    }
+
+    // Removed legacy toolbar copy button; use panel header Copy TXT/JSON
+
+    // Copy: full rendered output TXT (left header)
+    if (btnCopyOutputTxt) {
+      btnCopyOutputTxt.addEventListener('click', async () => {
+        if (!currentAst) { setStatus('Nothing rendered to copy', true, false); return; }
+        try {
+          setStatus('Copying output...', false, true);
+          const text = renderToString(currentAst);
+          await navigator.clipboard.writeText(text);
+          const lineCount = text.split('\n').length;
+          setStatus(`Copied output (${lineCount} line${lineCount !== 1 ? 's' : ''})`);
+        } catch (error) {
+          setStatus('Copy failed: ' + (error && error.message ? error.message : String(error)), true, false);
+        }
+      });
+    }
+
+    // Copy: full AST JSON (left header)
+    if (btnCopyOutputJson) {
+      btnCopyOutputJson.addEventListener('click', async () => {
+        if (!currentAst) { setStatus('Nothing rendered to copy', true, false); return; }
+        try {
+          setStatus('Copying JSON...', false, true);
+          const json = JSON.stringify(currentAst, null, 2);
+          await navigator.clipboard.writeText(json);
+          setStatus('Copied output JSON');
+        } catch (error) {
+          setStatus('Copy failed: ' + (error && error.message ? error.message : String(error)), true, false);
+        }
+      });
+    }
 
     // Show whitespace checkbox (global)
     chkShowWhitespace.addEventListener('change', () => {
