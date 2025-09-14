@@ -5,6 +5,7 @@ export interface DefinitionItemNode {
     termIndent: number;
     definitionIndent: number;
     lines: string[];
+    inline?: boolean;
     children?: DefinitionItemNode[];
 }
 

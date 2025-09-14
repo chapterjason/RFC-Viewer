@@ -133,6 +133,7 @@ export const DefinitionListMatcher: BlockMatcher = {
                     term = inlineMatch[1]!;
                     item.term = term;
                     item.lines.push(inlineMatch[2]!);
+                    item.inline = true;
                 }
             }
             // Consume term line
@@ -196,6 +197,7 @@ export const DefinitionListMatcher: BlockMatcher = {
                     if (inlineMatch) {
                         child.term = inlineMatch[1]!;
                         child.lines.push(inlineMatch[2]!);
+                        child.inline = true;
                     }
                 }
                 // consume child term line
