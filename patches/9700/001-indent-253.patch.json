@@ -1,0 +1,13 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/253",
+    "value": {
+      "type": "HttpResponse",
+      "lines": [
+        "     HTTP/1.1 303 See Other",
+        "     Location: https://attacker.example/"
+      ]
+    }
+  }
+]

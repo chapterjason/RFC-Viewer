@@ -1,0 +1,26 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/769",
+    "value": {
+      "type": "IndentedBlock",
+      "indent": 5,
+      "lines": [
+        "window.addEventListener(\"message\", (e) => {",
+        "  // validate exact authorization server origin",
+        "  if (e.origin === \"https://honest.as.example\") {",
+        "    // process e.data.code and e.data.state",
+        "  }",
+        "})"
+      ]
+    }
+  },
+  {
+    "op": "remove",
+    "path": "/children/770"
+  },
+  {
+    "op": "remove",
+    "path": "/children/770"
+  }
+]

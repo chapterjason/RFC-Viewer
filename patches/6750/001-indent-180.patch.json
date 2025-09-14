@@ -1,0 +1,13 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/180",
+    "value": {
+      "type": "IndentedBlock",
+      "indent": 5,
+      "lines": [
+        "https://example.com/resource?access_token=mF_9.B5f-4.1JqM&p=q"
+      ]
+    }
+  }
+]

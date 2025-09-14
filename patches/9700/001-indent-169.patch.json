@@ -1,0 +1,15 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/219",
+    "value": {
+      "type": "HttpRequest",
+      "lines": [
+        "     GET /authorize?response_type=code&client_id=s6BhdRkqt3&state=9ad67f",
+        "          &redirect_uri=https%3A%2F%2Fattacker.example%2F.somesite.e[..]",
+        "          HTTP/1.1",
+        "     Host: server.somesite.example"
+      ]
+    }
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/610",
+    "value": {
+      "type": "HttpResponse",
+      "lines": [
+        "     HTTP/1.1 200 OK",
+        "     Content-Type: application/json;charset=UTF-8",
+        "     Cache-Control: no-store",
+        "     Pragma: no-cache"
+      ],
+      "bodyLines": [
+        "     {",
+        "       \"access_token\":\"2YotnFZFEjr1zCsicMWpAA\",",
+        "       \"access_token_resource_server\":",
+        "         \"https://hostedresource.somesite.example/path1\",",
+        "     ...",
+        "     }"
+      ]
+    }
+  }
+]

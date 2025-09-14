@@ -1,0 +1,27 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/763",
+    "value": {
+      "type": "IndentedBlock",
+      "indent": 5,
+      "lines": [
+        "window.opener.postMessage(",
+        "  {",
+        "    code: \"ABC\",",
+        "    state: \"123\"",
+        "  },",
+        "  \"https://client.example\" // use explicit client origin",
+        ")"
+      ]
+    }
+  },
+  {
+    "op": "remove",
+    "path": "/children/764"
+  },
+  {
+    "op": "remove",
+    "path": "/children/764"
+  }
+]

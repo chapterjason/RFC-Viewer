@@ -1,0 +1,26 @@
+[
+  {
+    "op": "replace",
+    "path": "/children/606",
+    "value": {
+      "type": "HttpResponse",
+      "lines": [
+        "     HTTP/1.1 200 OK",
+        "     Content-Type: application/json"
+      ],
+      "bodyLines": [
+        "     {",
+        "       \"issuer\":\"https://server.somesite.example\",",
+        "       \"authorization_endpoint\":",
+        "         \"https://server.somesite.example/authorize\",",
+        "       \"resource_servers\":[",
+        "         \"email.somesite.example\",",
+        "         \"storage.somesite.example\",",
+        "         \"video.somesite.example\"",
+        "       ]",
+        "       ...",
+        "     }"
+      ]
+    }
+  }
+]
