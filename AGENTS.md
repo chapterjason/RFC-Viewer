@@ -82,6 +82,9 @@
 - Follow naming and formatting rules rigorously (Uppercase TS files/folders, LF endings, spaces-only indentation, braces everywhere).
 - Prefer minimal dependencies and explicit module boundaries. Avoid introducing CI. Tests must be self-contained and not read external fixtures.
 
+### Paragraph Indentation (RFC Source)
+- Treat narrative paragraphs as starting with exactly 3 leading spaces. These inputs are RFC-like, not Markdown, and sections are indented accordingly. Matchers and renderers must preserve this convention when identifying and emitting paragraph content. Do not trim these leading spaces from paragraph lines.
+
 ## Commit & Pull Request Guidelines
 - Commits: use clear, imperative subjects (e.g., "Add parser for indented blocks"). Group related changes; keep diffs focused.
 - PRs: include a summary, rationale, and links to issues. Add before/after examples for parsing behavior. Confirm `npx tsc --noEmit` passes and include tests when behavior changes.
