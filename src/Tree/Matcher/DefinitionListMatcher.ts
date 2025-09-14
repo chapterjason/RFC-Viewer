@@ -38,6 +38,14 @@ function isTermLine(line: string, next: string | null, allowDeep = false): boole
     if (/\.{2,}\s*\d+\s*$/.test(trimmed)) {
         return false; // looks like ToC
     }
+    // Disallow obvious code constructs that commonly appear in narrative paragraphs
+    // e.g., function calls or blocks spanning multiple lines
+    if (trimmed.endsWith('(')) {
+        return false; // looks like a function call continuation
+    }
+    if (/^[{}]$/.test(trimmed) || /[{]\s*$/.test(trimmed)) {
+        return false; // looks like a code block delimiter
+    }
     // Allow trailing ':' for template-style terms (e.g., "Error name:")
     if (/[.;]$/.test(trimmed)) {
         return false; // likely a sentence, not a term
