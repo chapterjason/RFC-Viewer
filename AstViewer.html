@@ -170,8 +170,9 @@
       font-family: Consolas, monospace;
       font-variant-ligatures: none;
     }
-    /* Line with fixed-width number gutter and content */
-    .output .line { display: grid; grid-template-columns: var(--ln-width, 4ch) 1fr; align-items: baseline; }
+    /* Line with fixed-width left index gutter, line-number gutter, and content */
+    .output .line { display: grid; grid-template-columns: var(--ix-width, 3ch) var(--ln-width, 4ch) 1fr; align-items: baseline; }
+    .output .line .ix { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 6px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
     .output .line .ln { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 8px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
     .output .line .content { display: inline-block; padding: 0 6px; }
     .output .line::selection { background: rgba(122, 162, 247, 0.35); }
@@ -933,6 +934,10 @@
         badge.setAttribute('role', 'presentation');
         block.appendChild(badge);
 
+        // Sibling index (zero-based): use current node's index within its depth
+        const siblingIdx = nodeIndex.get(nodeId) ?? 0;
+        block.dataset.siblingIndex = String(siblingIdx);
+
         // No per-block toggles; collapse is global-only
 
         let lineNumber = 0;
@@ -958,8 +963,14 @@
             contentEl.dataset.raw = text;
             if (showWhitespace) { renderWhitespaceSpans(contentEl, text); } else { contentEl.textContent = text; }
           }
-          lineEl.appendChild(lnEl);
-          lineEl.appendChild(contentEl);
+        // Left index gutter (show sibling index only on the first line of the block)
+        const ixEl = document.createElement('span');
+        ixEl.className = 'ix';
+        ixEl.textContent = (index === 0) ? String(siblingIdx) : '';
+
+        lineEl.appendChild(ixEl);
+        lineEl.appendChild(lnEl);
+        lineEl.appendChild(contentEl);
           block.appendChild(lineEl);
           nodeLines.get(nodeId).push(lineEl);
           totalLines += 1;
@@ -978,9 +989,11 @@
       }
 
       outputEl.appendChild(frag);
-      // Set fixed line-number gutter width based on total lines (monospace 'ch')
+      // Set fixed gutters: left index based on max sibling index, line-number based on total lines
       const digits = Math.max(2, String(totalLines).length);
       outputEl.style.setProperty('--ln-width', (digits + 2) + 'ch');
+      const maxIdxDigits = Math.max(1, String(Math.max(0, nodeOrder.length - 1)).length);
+      outputEl.style.setProperty('--ix-width', (maxIdxDigits + 1) + 'ch');
       buildLegend(typesInUse);
       updateCollapseStates();
       // Defer whitespace markers to idle time for smoother first paint
