@@ -28,12 +28,15 @@ describe('HttpResponseMatcher', () => {
         ];
         expect(actualKinds).toEqual(expectedKinds);
 
-        // Assert: the HttpResponse node contains exactly the status + header lines
+        // Assert: the HttpResponse node splits status and headers
         const node: any = document.children[2];
         expect(node.type).toBe('HttpResponse');
-        expect(node.lines.length).toBe(2);
-        expect(node.lines[0]).toBe('   HTTP/1.1 302 Found');
-        expect(node.lines[1]).toMatch(/^\s{3}Location:/);
+        expect(typeof node.statusLine).toBe('string');
+        expect(node.statusLine).toBe('HTTP/1.1 302 Found');
+        expect(Array.isArray(node.headerLines)).toBe(true);
+        expect(node.headerLines.length).toBe(1);
+        expect(node.headerLines[0]).toMatch(/^Location:/);
+        expect(typeof node.indent).toBe('number');
     });
 
     it('does not misclassify narrative mentioning HTTP unless followed by headers', () => {

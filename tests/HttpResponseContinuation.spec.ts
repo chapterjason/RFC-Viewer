@@ -31,10 +31,12 @@ describe('HttpResponseMatcher continuation lines', () => {
         // Assert: the HttpResponse node includes the wrapped continuation line
         const node: any = document.children[2];
         expect(node.type).toBe('HttpResponse');
-        expect(node.lines.length).toBe(3);
-        expect(node.lines[0].trim()).toMatch(/^HTTP\/\d(?:\.\d)?\s+302\b/);
-        expect(node.lines[1]).toMatch(/^\s+Location:/);
-        expect(node.lines[2].trim().startsWith('&state=xyz')).toBe(true);
+        expect(typeof node.statusLine).toBe('string');
+        expect(node.statusLine.trim()).toMatch(/^HTTP\/\d(?:\.\d)?\s+302\b/);
+        expect(Array.isArray(node.headerLines)).toBe(true);
+        expect(node.headerLines.length).toBe(2);
+        expect(node.headerLines[0]).toMatch(/^Location:/);
+        expect(node.headerLines[1].trim().startsWith('&state=xyz')).toBe(true);
+        expect(typeof node.indent).toBe('number');
     });
 });
-

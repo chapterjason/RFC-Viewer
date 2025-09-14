@@ -1,11 +1,10 @@
-export function applyIndent(lines: string[], indent: number): string[] {
+export function applyIndent(lines: readonly string[] | undefined | null, indent: number): string[] {
     const depth = Math.max(0, indent | 0);
+    const src: readonly string[] = Array.isArray(lines) ? lines : [];
 
-    if (depth === 0) {
-        return [...lines];
-    }
+    if (depth === 0) { return [...src]; }
 
     const prefix = " ".repeat(depth);
 
-    return lines.map((line) => (line.length === 0 ? "" : prefix + line));
+    return src.map((line) => (line.length === 0 ? "" : prefix + line));
 }

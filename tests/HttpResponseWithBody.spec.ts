@@ -40,9 +40,10 @@ describe('HttpResponseMatcher with body', () => {
         // Locate the HttpResponse node (index 2)
         const node: any = doc.children[2];
         expect(node.type).toBe('HttpResponse');
-        expect(Array.isArray(node.lines)).toBe(true);
-        expect(node.lines[0]).toMatch(/HTTP\/1\.[01]\s+200\s+OK/);
-        expect(node.lines.some((s: string) => /Content-Type:\s*application\/json/i.test(s))).toBe(true);
+        expect(typeof node.statusLine).toBe('string');
+        expect(node.statusLine).toMatch(/HTTP\/1\.[01]\s+200\s+OK/);
+        expect(Array.isArray(node.headerLines)).toBe(true);
+        expect(node.headerLines.some((s: string) => /Content-Type:\s*application\/json/i.test(s))).toBe(true);
         expect(node.bodyLines && node.bodyLines.length).toBeGreaterThan(0);
         expect(node.bodyLines![0].trim()).toBe('{');
         expect(node.bodyLines![node.bodyLines!.length - 1].trim()).toBe('}');

@@ -33,16 +33,15 @@ export const HttpResponseMatcher: BlockMatcher = {
         return second !== null && headerLineRegex.test(second);
     },
     parse: (context) => {
-        
-        const lines: string[] = [];
+        const headerLines: string[] = [];
 
-        // Establish base indent (align with IndentedBlock's base behavior of min 4)
+        // Establish base indent equal to the status line's indentation
         const first = context.peek(0)!;
         const firstIndent = getIndentation(first);
-        const base = Math.min(4, firstIndent);
+        const base = firstIndent;
 
         // Consume status line
-        lines.push(first);
+        const statusLine = first;
         context.advance();
 
         // Collect subsequent header and continuation lines at same-or-deeper indent.
@@ -58,7 +57,7 @@ export const HttpResponseMatcher: BlockMatcher = {
             if (getIndentation(line) < base) {
                 break;
             }
-            lines.push(line);
+            headerLines.push(line);
             context.advance();
         }
 
@@ -74,14 +73,14 @@ export const HttpResponseMatcher: BlockMatcher = {
             // Look ahead to see if a body block follows at same-or-deeper indent
             const afterBlank = context.peek(1);
             if (afterBlank !== null && getIndentation(afterBlank) >= base) {
-                const firstLine = lines[0] ?? "";
+                const firstLine = statusLine ?? "";
                 const m = firstLine.match(/HTTP\/(?:\d(?:\.\d)?)\s+(\d{3})/);
                 let status = NaN;
                 if (m && m[1]) {
                     status = parseInt(m[1], 10);
                 }
                 const statusAllowsBody = !(status >= 100 && status < 200) && status !== 204 && status !== 304;
-                const hasBodyHeader = lines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
+                const hasBodyHeader = headerLines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
 
                 if (statusAllowsBody && hasBodyHeader) {
                     // consume the blank line here (but do not record it in node; renderer will add one)
@@ -101,10 +100,17 @@ export const HttpResponseMatcher: BlockMatcher = {
             }
         }
 
+        const trim = (s: string) => (s.length === 0 ? s : s.slice(base));
+        const statusOut = trim(statusLine);
+        const headerOut = headerLines.map(trim);
+        const bodyOut = bodyLines?.map(trim);
+
         return {
             type: "HttpResponse",
-            lines,
-            bodyLines,
+            indent: base,
+            statusLine: statusOut,
+            headerLines: headerOut,
+            bodyLines: bodyOut,
             
         } as HttpResponseNode;
     },
