@@ -40,6 +40,7 @@ async function main() {
         const rfcPatchesDirectory = path.join(patchesDirectory, `${number}`);
         const rfcFile = path.join(rfcDirectory, `rfc${number}.txt`);
         const originalOutputFile = path.join(outputDirectory, `rfc${number}.original.txt`);
+        const parsedOutputFile = path.join(outputDirectory, `rfc${number}.parsed.txt`);
         const modifiedOutputFile = path.join(outputDirectory, `rfc${number}.txt`);
         const originalAstFile = path.join(outputDirectory, `rfc${number}.original.json`);
         const modifiedAstFile = path.join(outputDirectory, `rfc${number}.json`);
@@ -62,17 +63,22 @@ async function main() {
                 const patchContent = fs.readFileSync(path.join(rfcPatchesDirectory, patchFile), 'utf-8');
                 const patchAst = JSON.parse(patchContent);
 
+                console.log(`Patching RFC${number} with ${patchFile}`);
+
                 modifiedAst = patch(modifiedAst, patchAst);
             }
         }
 
         const output = renderDocument(ast);
+        const modifiedOutput = renderDocument(modifiedAst);
 
         fs.writeFileSync(originalOutputFile, content);
         fs.writeFileSync(originalAstFile, JSON.stringify(ast, null, 2));
 
-        fs.writeFileSync(modifiedOutputFile, output.join('\n'));
+        fs.writeFileSync(modifiedOutputFile, modifiedOutput.join('\n'));
         fs.writeFileSync(modifiedAstFile, JSON.stringify(modifiedAst, null, 2));
+
+        fs.writeFileSync(parsedOutputFile, output.join('\n'));
     }
 }
 
