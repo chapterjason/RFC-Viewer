@@ -31,10 +31,11 @@ describe('HttpRequestMatcher', () => {
         // Assert: HttpRequest node contains the start/request lines and header lines
         const node: any = document.children[2];
         expect(node.type).toBe('HttpRequest');
-        expect(node.lines.length).toBe(3);
-        expect(node.lines[0]).toMatch(/^\s{4}GET\s+\/authorize\?response_type=code/);
-        expect(node.lines[1]).toMatch(/^\s{8}&redirect_uri=.*HTTP\/[0-9]/);
-        expect(node.lines[2]).toMatch(/^\s{4}Host:/);
+        expect(node.requestLines.length).toBe(2);
+        expect(node.headerLines.length).toBe(1);
+        expect(node.requestLines[0]).toMatch(/^GET\s+\/authorize\?response_type=code/);
+        expect(node.requestLines[1]).toMatch(/^\s{4}&redirect_uri=.*HTTP\/[0-9]/);
+        expect(node.headerLines[0]).toMatch(/^Host:/);
     });
 
     it('supports many HTTP methods and requires evidence (HTTP token or header)', () => {
@@ -44,7 +45,7 @@ describe('HttpRequestMatcher', () => {
         expect(doc1.children.map((n: any) => n.type)).toEqual(['SectionTitle']);
 
         // Arrange: explicit methods
-        const methods = ['GET','POST','PUT','DELETE','PATCH','HEAD','OPTIONS','CONNECT','TRACE','PROPFIND','MKCOL'];
+        const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'CONNECT', 'TRACE', 'PROPFIND', 'MKCOL'];
         for (const m of methods) {
             const req = [
                 `   ${m} /sample HTTP/1.1`,

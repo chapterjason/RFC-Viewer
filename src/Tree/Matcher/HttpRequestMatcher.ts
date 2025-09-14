@@ -31,9 +31,11 @@ export const HttpRequestMatcher: BlockMatcher = {
     priority: 45,
     test: (context) => {
         const first = context.peek(0);
+
         if (first === null || isBlankLine(first)) {
             return false;
         }
+
         if (!methodLineRegex.test(first)) {
             return false;
         }
@@ -46,63 +48,92 @@ export const HttpRequestMatcher: BlockMatcher = {
         // This avoids false positives where a narrative paragraph mentions
         // "HTTP/1.1" on a subsequent line at the same indent as prose.
         const base = getIndentation(first);
+
         if (httpTokenRegex.test(first)) {
             return true;
         }
+
         let index = 1;
         let hops = 0;
         const MAX_LOOKAHEAD = 6; // allow deeper wrapped request-target before HTTP token
+
         while (true) {
             const line = context.peek(index);
+
             if (line === null || isBlankLine(line)) {
                 break;
             }
+
             if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
                 break;
             }
+
             const indent = getIndentation(line);
+
             if (indent < base) {
                 break;
             }
+
             // Header-like line is strong evidence of a request block
             if (headerLineRegex.test(line)) {
                 return true;
             }
+
             // Only count HTTP tokens on deeper-indented continuation lines as evidence.
             // Ignore HTTP tokens appearing at the same indent as the method line to
             // avoid matching narrative paragraphs that mention HTTP/1.1.
             if (indent > base && httpTokenRegex.test(line)) {
                 return true;
             }
+
             // Bound the lookahead to avoid scanning deep into narrative paragraphs
             hops += 1;
+
             if (hops >= MAX_LOOKAHEAD) {
                 break;
             }
+
             index += 1;
         }
+
         return false;
     },
     parse: (context) => {
-        const lines: string[] = [];
+        const requestLines: string[] = [];
+        const headerLines: string[] = [];
 
         const first = context.peek(0)!;
         const firstIndent = getIndentation(first);
-        const base = Math.min(4, firstIndent);
+        const base = firstIndent;
 
         // Consume request/start and header-like lines until blank/boundary
+        let mode: 'request' | 'headers' = 'request';
+
         while (!context.cursor.isEOL()) {
             const s = context.peek(0);
+
             if (s === null || isBlankLine(s)) {
                 break;
             }
+
             if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
                 break;
             }
+
             if (getIndentation(s) < base) {
                 break;
             }
-            lines.push(s);
+
+            if (mode === 'request' && headerLineRegex.test(s)) {
+                mode = 'headers';
+            }
+
+            if (mode === 'request') {
+                requestLines.push(s);
+            } else {
+                headerLines.push(s);
+            }
+
             context.advance();
         }
 
@@ -113,27 +144,45 @@ export const HttpRequestMatcher: BlockMatcher = {
         // narrative paragraphs that are written at the same indent as the example.
         let bodyLines: string[] | undefined = undefined;
         const maybeBlank = context.peek(0);
+
         if (maybeBlank !== null && isBlankLine(maybeBlank)) {
             const afterBlank = context.peek(1);
+
             if (afterBlank !== null && getIndentation(afterBlank) >= base) {
                 // Decide if we should consider a body for this request
-                const firstLine = lines[0] ?? "";
+                const firstLine = requestLines[0] ?? "";
                 const methodMatch = firstLine.trim().match(/^([A-Z!#$%&'*+.^_`|~-]+)/);
                 const method = methodMatch ? methodMatch[1] : "";
                 const likelyBodyless = method === "GET" || method === "HEAD" || method === "TRACE";
-                const hasBodyHeader = lines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
+                const hasBodyHeader = headerLines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
 
                 if (!likelyBodyless || hasBodyHeader) {
                     // consume the blank and collect the body block
                     context.advance();
+
                     bodyLines = [];
+
                     while (!context.cursor.isEOL()) {
                         const line = context.peek(0);
-                        if (line === null) { break; }
-                        if (isBlankLine(line)) { break; }
-                        if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) { break; }
+
+                        if (line === null) {
+                            break;
+                        }
+
+                        if (isBlankLine(line)) {
+                            break;
+                        }
+
+                        if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
+                            break;
+                        }
+
                         const indent = getIndentation(line);
-                        if (indent < base) { break; }
+
+                        if (indent < base) {
+                            break;
+                        }
+
                         bodyLines.push(line);
                         context.advance();
                     }
@@ -141,10 +190,18 @@ export const HttpRequestMatcher: BlockMatcher = {
             }
         }
 
+        // Strip the common base indentation from all non-blank lines, preserving deeper indentation
+        const trim = (s: string) => (s.length === 0 ? s : s.slice(base));
+        const requestOut = requestLines.map(trim);
+        const headerOut = headerLines.map(trim);
+        const bodyOut = bodyLines?.map(trim);
+
         return {
             type: "HttpRequest",
-            lines,
-            bodyLines,
+            indent: base,
+            requestLines: requestOut,
+            headerLines: headerOut,
+            bodyLines: bodyOut,
         } as HttpRequestNode;
     },
 };

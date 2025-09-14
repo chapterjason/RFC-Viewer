@@ -35,10 +35,11 @@ describe('parse using RFC-like snippets with context', () => {
         // Assert: HttpRequest shape and content lines (indent preserved)
         const httpRequest: any = actualValue.children[2];
         expect(httpRequest.type).toBe('HttpRequest');
-        expect(httpRequest.lines.length).toBe(3);
-        expect(httpRequest.lines[0]).toMatch(/^\s{4}GET \/authorize\?response_type=code/);
-        expect(httpRequest.lines[1]).toMatch(/^\s{8}&redirect_uri=/);
-        expect(httpRequest.lines[2]).toMatch(/^\s{4}Host: server\.example\.com/);
+        expect(httpRequest.requestLines.length).toBe(2);
+        expect(httpRequest.headerLines.length).toBe(1);
+        expect(httpRequest.requestLines[0]).toMatch(/^GET \/authorize\?response_type=code/);
+        expect(httpRequest.requestLines[1]).toMatch(/^\s{4}&redirect_uri=/);
+        expect(httpRequest.headerLines[0]).toMatch(/^Host: server\.example\.com/);
     });
 
     it('groups consecutive non-blank ToC lines into a paragraph with surrounding context', () => {

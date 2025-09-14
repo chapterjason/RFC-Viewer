@@ -2,13 +2,16 @@ import {describe, expect, it} from 'vitest';
 import {renderNode} from '../src/Tree/Render/RenderNode.js';
 
 describe('RenderHttpRequest', () => {
-    it('preserves request lines exactly', () => {
+    it('preserves request and header lines exactly', () => {
         // Arrange
         const node: any = {
             type: 'HttpRequest',
-            lines: [
-                '   GET /authorize HTTP/1.1',
-                '   Host: example.com'
+            indent: 3,
+            requestLines: [
+                'GET /authorize HTTP/1.1',
+            ],
+            headerLines: [
+                'Host: example.com'
             ],
         };
 
@@ -16,24 +19,35 @@ describe('RenderHttpRequest', () => {
         const rendered = renderNode(node);
 
         // Assert
-        expect(rendered).toEqual(node.lines);
+        const p = ' '.repeat(node.indent);
+        expect(rendered).toEqual([p + node.requestLines[0], p + node.headerLines[0]]);
     });
 
     it('renders a blank line between headers and body', () => {
         const node: any = {
             type: 'HttpRequest',
-            lines: [
-                '   POST /token HTTP/1.1',
-                '   Host: example.com',
-                '   Content-Type: application/json',
+            indent: 3,
+            requestLines: [
+                'POST /token HTTP/1.1',
+            ],
+            headerLines: [
+                'Host: example.com',
+                'Content-Type: application/json',
             ],
             bodyLines: [
-                '   {',
-                '     "a": 1',
-                '   }'
+                '{',
+                '  "a": 1',
+                '}'
             ],
         };
         const rendered = renderNode(node);
-        expect(rendered).toEqual([...node.lines, '', ...node.bodyLines]);
+        const p = ' '.repeat(node.indent);
+        expect(rendered).toEqual([
+            p + node.requestLines[0],
+            p + node.headerLines[0],
+            p + node.headerLines[1],
+            '',
+            ...node.bodyLines.map(l => p + l),
+        ]);
     });
 });

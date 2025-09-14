@@ -1,6 +1,6 @@
 import type {IndentedBlockNode} from "../Node/IndentedBlockNode.js";
+import {applyIndent} from "../../Utils/ApplyIndent.js";
 
 export function renderIndentedBlock(node: IndentedBlockNode): string[] {
-    const indent = " ".repeat(node.indent);
-    return node.lines.map((line) => line.length === 0 ? "" : indent + line);
+    return applyIndent(node.lines, node.indent);
 }

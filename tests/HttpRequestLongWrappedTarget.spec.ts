@@ -28,11 +28,10 @@ describe('HttpRequestMatcher long wrapped request-target (bug9)', () => {
 
         const req: any = doc.children[1];
         expect(req.type).toBe('HttpRequest');
-        // Should include method line, all wrapped lines, and the Host header
-        expect(req.lines.length).toBe(6);
-        expect(req.lines[0]).toMatch(/GET\s+\/authorize\?response_type=token/);
-        expect(req.lines.some((l: string) => /HTTP\/[0-9]/.test(l))).toBe(true);
-        expect(req.lines[req.lines.length - 1]).toMatch(/\bHost:\s*server\.somesite\.example$/);
+        expect(req.requestLines.length).toBe(5);
+        expect(req.headerLines.length).toBe(1);
+        expect(req.requestLines[0]).toMatch(/GET\s+\/authorize\?response_type=token/);
+        expect(req.requestLines.some((l: string) => /HTTP\/[0-9]/.test(l))).toBe(true);
+        expect(req.headerLines[0]).toMatch(/\bHost:\s*server\.somesite\.example$/);
     });
 });
-

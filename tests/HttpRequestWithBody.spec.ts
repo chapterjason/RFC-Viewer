@@ -33,10 +33,9 @@ describe('HttpRequestMatcher with body', () => {
 
         const node: any = doc.children[2];
         expect(node.type).toBe('HttpRequest');
-        expect(node.lines.some((s: string) => /POST\s+\/token/.test(s))).toBe(true);
-        expect(node.lines.some((s: string) => /Content-Type:\s*application\/x-www-form-urlencoded/i.test(s))).toBe(true);
+        expect(node.requestLines.some((s: string) => /POST\s+\/token/.test(s))).toBe(true);
+        expect(node.headerLines.some((s: string) => /Content-Type:\s*application\/x-www-form-urlencoded/i.test(s))).toBe(true);
         expect(node.bodyLines && node.bodyLines.length).toBeGreaterThan(0);
         expect(node.bodyLines![0].trim()).toMatch(/^grant_type=/);
     });
 });
-
