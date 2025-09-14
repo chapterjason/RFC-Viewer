@@ -1628,19 +1628,35 @@
           { type: 'BlankLine' },
 
           // 11: TableOfContents - two entries (one simple, one wrapped)
-          { type: 'TableOfContents',
-            lines: [
-              '   1. Lorem Ipsum ..................................................4',
-              '     1.1. Dolor Sit ................................................6',
-              '   2. Amet Consectetur',
-              '     ...............................................................10'
-            ],
-            entries: [
-              { raw: '   1. Lorem Ipsum ..................................................4', indent: 3, title: '1. Lorem Ipsum', page: 4 },
-              { raw: '     1.1. Dolor Sit ................................................6', indent: 5, title: '1.1. Dolor Sit', page: 6 },
-              { raw: '   2. Amet Consectetur\n     ...............................................................10', indent: 3, title: '2. Amet Consectetur', page: 10 },
-            ]
-          },
+            {
+                "type": "TableOfContents",
+                "lines": [
+                    "   1. Lorem Ipsum .....................................................4",
+                    "     1.1. Dolor Sit ...................................................6",
+                    "   2. Amet Consectetur",
+                    "     .................................................................10"
+                ],
+                "entries": [
+                    {
+                        "raw": "   1. Lorem Ipsum .....................................................4",
+                        "indent": 3,
+                        "title": "1. Lorem Ipsum",
+                        "page": 4
+                    },
+                    {
+                        "raw": "     1.1. Dolor Sit ...................................................6",
+                        "indent": 5,
+                        "title": "1.1. Dolor Sit",
+                        "page": 6
+                    },
+                    {
+                        "raw": "   2. Amet Consectetur\n     .................................................................10",
+                        "indent": 3,
+                        "title": "2. Amet Consectetur",
+                        "page": 10
+                    }
+                ]
+            },
 
           // 12: Blank line
           { type: 'BlankLine' },
@@ -1699,7 +1715,8 @@
             '   | Lorum  |                               |     Ipsum     |',
             '   |        |<-(B)-- Vacuus Rivus --------- |               |',
             '   +--------+                               +---------------+',
-            '   Figure 1: Exemplum Textus (specimen)'
+            '',
+            '            Figure 1: Exemplum Textus (specimen)'
           ]},
 
           // 22: Blank line
