@@ -76,7 +76,10 @@ export const HttpResponseMatcher: BlockMatcher = {
             if (afterBlank !== null && getIndentation(afterBlank) >= base) {
                 const firstLine = lines[0] ?? "";
                 const m = firstLine.match(/HTTP\/(?:\d(?:\.\d)?)\s+(\d{3})/);
-                const status = m ? parseInt(m[1], 10) : NaN;
+                let status = NaN;
+                if (m && m[1]) {
+                    status = parseInt(m[1], 10);
+                }
                 const statusAllowsBody = !(status >= 100 && status < 200) && status !== 204 && status !== 304;
                 const hasBodyHeader = lines.some(l => /\b(Content-Type|Content-Length|Transfer-Encoding)\s*:/i.test(l));
 
