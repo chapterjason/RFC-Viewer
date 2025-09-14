@@ -7,7 +7,6 @@ export default defineConfig({
     threads: false,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
     },
   },
   esbuild: {
