@@ -177,7 +177,7 @@
     .output .line { display: grid; grid-template-columns: var(--ix-width, 3ch) var(--ln-width, 4ch) 1fr; align-items: baseline; position: relative; }
     .output .line .ix { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 6px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
     .output .line .ln { color: var(--muted); opacity: 0.7; text-align: right; padding-right: 8px; user-select: none; -webkit-user-select: none; -moz-user-select: none; }
-    .output .line .content { display: inline-block; padding: 0 6px; }
+    .output .line .content { display: inline-block; padding: 0 6px; position: relative; }
     .output .line::selection { background: rgba(122, 162, 247, 0.35); }
     /* Visible whitespace markers: overlay via ::before so actual whitespace remains copyable */
     .output .line .ws { position: relative; display: inline-block; color: var(--muted); opacity: 0.7; }
@@ -196,6 +196,54 @@
       border-left: 1px solid var(--col-guide-color);
       pointer-events: none;
     }
+    /* Validation highlighting for errors (e.g., over-72-char lines) */
+    .output .line.error-too-long {
+      /* stronger overall tint */
+      background-color: rgba(255, 59, 59, 0.18);
+    }
+    /* Bold left-edge danger stripe for instant recognition */
+    .output .line.error-too-long::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 0;
+      width: 6px;
+      background: var(--danger);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2) inset;
+      pointer-events: none;
+    }
+    /* Strong overlay beyond the 72-char column with warning stripes */
+    .output .line.error-too-long .content::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: var(--col-guide);
+      right: 0;
+      background: repeating-linear-gradient(45deg,
+        rgba(255, 107, 107, 0.45), rgba(255, 107, 107, 0.45) 8px,
+        rgba(255, 107, 107, 0.20) 8px, rgba(255, 107, 107, 0.20) 16px
+      );
+      pointer-events: none;
+    }
+    /* Make the column guide bold and red on error lines */
+    .output .line.error-too-long::after {
+      border-left-color: var(--danger);
+      border-left-width: 2px;
+    }
+    .output .line.error-too-long .ln,
+    .output .line.error-too-long .ix {
+      color: var(--danger);
+      font-weight: 600;
+    }
+    /* Add an inline alert badge in the index gutter */
+    .output .line.error-too-long .ix::after {
+      content: '⛔';
+      margin-left: 4px;
+      font-size: 11px;
+      color: var(--danger);
+      opacity: 0.95;
+    }
+    .output .line.flash { outline: 3px solid var(--accent); outline-offset: -1px; background-color: rgba(122, 162, 247, 0.10); }
     /* Visualize page breaks explicitly */
     .output .line.page-break { color: var(--muted); }
 
@@ -287,6 +335,17 @@
     .log summary { list-style: none; cursor: pointer; padding: 6px 12px; color: var(--muted); background: #0f1320; user-select: none; }
     .log summary::marker { display: none; }
     .log pre { margin: 0; padding: 8px 12px; font-size: 12px; line-height: 1.45; color: var(--muted); max-height: 200px; overflow: auto; white-space: pre; }
+
+    /* Validation panel styles */
+    .validation { border-top: 1px solid var(--border); }
+    .validation summary { list-style: none; cursor: pointer; padding: 6px 12px; color: var(--muted); background: #0f1320; user-select: none; display: flex; gap: 8px; align-items: baseline; }
+    .validation summary::marker { display: none; }
+    .validation .content { padding: 6px 12px; display: grid; gap: 6px; max-height: 240px; overflow: auto; }
+    .validation .error-item { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--text); }
+    .validation .error-item .loc { color: var(--danger); min-width: 10ch; }
+    .validation .error-item .msg { color: var(--muted); }
+    .validation .error-item .jump { margin-left: auto; }
+    .validation .btn-link { background: transparent; color: var(--accent); border: none; padding: 0; cursor: pointer; font-size: 12px; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -346,6 +405,10 @@
     </div>
 
     <div class="status" id="status"></div>
+    <details id="validationPanel" class="validation">
+      <summary><span id="validationSummary">Validation</span></summary>
+      <div id="validationContent" class="content"></div>
+    </details>
     <details id="logPanel" class="log">
       <summary>Activity Log</summary>
       <pre id="statusLog"></pre>
@@ -399,6 +462,9 @@
     const statusEl = document.getElementById('status');
     const logPanelEl = document.getElementById('logPanel');
     const statusLogEl = document.getElementById('statusLog');
+    const validationPanelEl = document.getElementById('validationPanel');
+    const validationSummaryEl = document.getElementById('validationSummary');
+    const validationContentEl = document.getElementById('validationContent');
     const typesPopover = document.getElementById('typesPopover');
     const typesListEl = document.getElementById('typesList');
     const btnTypes = document.getElementById('btnTypes');
@@ -446,6 +512,7 @@
       'Document','Title','SectionTitle','Metadata','Paragraph','IndentedBlock','List','DefinitionList','TableOfContents','Figure','HttpResponse','HttpRequest','Abnf','BlankLine','PageHeader','PageFooter','PageBreak'
     ];
     const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
+    const MAX_LINE_LENGTH = 72; // validator threshold
 
     // Lightweight activity log for status changes and durations
     const statusLog = [];
@@ -816,6 +883,8 @@
       // Renumber gutters and update collapse states
       recomputeGlobalLineNumbers();
       updateCollapseStates();
+      // Re-run validation after edits to capture correct line numbers
+      validateDocument();
       // Refresh selection view without clobbering editor
       suppressEditorUpdate = true; updateSelectionView(); suppressEditorUpdate = false;
       // Restore editor focus/caret if it had focus before
@@ -1128,6 +1197,8 @@
       updateCollapseStates();
       // Defer whitespace markers to idle time for smoother first paint
       scheduleWhitespaceRender();
+      // Validate after initial render
+      validateDocument();
       setStatus('Rendered ' + totalLines + ' lines.');
     }
 
@@ -1239,6 +1310,7 @@
         })(lines);
         } catch (_) {}
       }
+      // Note: validation is run after global renumbering in applyNodeEdits
     }
 
     function recomputeGlobalLineNumbers() {
@@ -1250,6 +1322,73 @@
       }
       const digits = Math.max(2, String(count).length);
       outputEl.style.setProperty('--ln-width', (digits + 2) + 'ch');
+    }
+
+    // Validation: enforce 72-char line length, mark offending lines, and list errors
+    function validateDocument() {
+      // Clear previous flags
+      const allLines = outputEl.querySelectorAll('.line');
+      for (const line of allLines) {
+        line.classList.remove('error-too-long');
+      }
+      validationContentEl.innerHTML = '';
+
+      const errors = [];
+      for (const line of allLines) {
+        const lnEl = line.querySelector('.ln');
+        const contentEl = line.querySelector('.content');
+        const raw = (contentEl && (contentEl.dataset.raw != null ? contentEl.dataset.raw : contentEl.textContent)) || '';
+        const length = raw.length;
+        if (length > MAX_LINE_LENGTH) {
+          line.classList.add('error-too-long');
+          const ln = Number(lnEl && lnEl.textContent ? lnEl.textContent : '0');
+          errors.push({ lineEl: line, lineNumber: ln, length, preview: raw });
+        }
+      }
+
+      // Build panel UI
+      if (errors.length === 0) {
+        validationSummaryEl.textContent = 'Validation: no errors';
+        const ok = document.createElement('div');
+        ok.className = 'error-item';
+        ok.innerHTML = `<span class="msg" style="color: var(--ok);">No validation errors.</span>`;
+        validationContentEl.appendChild(ok);
+        validationPanelEl.open = false;
+        return;
+      }
+
+      validationSummaryEl.textContent = `Validation: ${errors.length} error${errors.length !== 1 ? 's' : ''}`;
+      for (const err of errors) {
+        const row = document.createElement('div');
+        row.className = 'error-item';
+        const loc = document.createElement('span');
+        loc.className = 'loc';
+        loc.textContent = `Line ${err.lineNumber}`;
+        const msg = document.createElement('span');
+        msg.className = 'msg';
+        const trimmed = err.preview.replace(/\s+/g, ' ').trim();
+        msg.textContent = `length ${err.length} (> ${MAX_LINE_LENGTH}) — ${trimmed.slice(0, 72)}${trimmed.length > 72 ? '…' : ''}`;
+        const jump = document.createElement('button');
+        jump.className = 'btn-link jump';
+        jump.textContent = 'Jump';
+        jump.addEventListener('click', (e) => { e.preventDefault(); scrollToLine(err.lineEl); });
+        row.appendChild(loc);
+        row.appendChild(msg);
+        row.appendChild(jump);
+        validationContentEl.appendChild(row);
+      }
+      validationPanelEl.open = true; // open when errors exist
+    }
+
+    function scrollToLine(lineEl) {
+      if (!lineEl) { return; }
+      const container = renderAreaEl;
+      const cRect = container.getBoundingClientRect();
+      const lRect = lineEl.getBoundingClientRect();
+      const top = (lRect.top - cRect.top) + container.scrollTop - 20;
+      container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      lineEl.classList.add('flash');
+      setTimeout(() => { lineEl.classList.remove('flash'); }, 1200);
     }
 
     function toCorsProxy(url) {
