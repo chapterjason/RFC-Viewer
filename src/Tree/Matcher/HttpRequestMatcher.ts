@@ -17,7 +17,11 @@ import type {HttpRequestNode} from "../Node/HttpRequestNode.js";
 // METHOD token pattern: require an uppercase token of at least 3 chars
 // (e.g., GET, POST, M-SEARCH), composed of A-Z and hyphens. This avoids
 // matching narrative lines like "A realm attribute...".
-const methodLineRegex = /^\s*[A-Z][A-Z-]{2,}\s+\S.*$/;
+// Require the token to be followed by a plausible request-target start:
+// - "/" (origin-form)
+// - "*" (asterisk-form)
+// - "scheme://" (absolute-form)
+const methodLineRegex = /^\s*[A-Z][A-Z-]{2,}\s+(?:\/(?:\S.*)?|\*(?:\s.*)?|[A-Za-z][A-Za-z0-9+.-]*:\/\/\S.*)$/;
 const httpTokenRegex = /\bHTTP\/(?:\d(?:\.\d)?)\b/;
 const headerLineRegex = /^\s*[A-Za-z0-9][A-Za-z0-9\-]*:\s?.*$/;
 

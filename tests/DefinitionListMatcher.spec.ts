@@ -70,6 +70,56 @@ describe('DefinitionListMatcher', () => {
     expect(defList.items[0].lines.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('splits inline label with colon and two spaces into term and first definition line', () => {
+    // Arrange: term and definition share the first line, with continuation below
+    const snippetWithContext = [
+      '   Token replay:  An attacker attempts to use a token that has already',
+      '      been used with that resource server in the past.',
+    ];
+
+    // Act
+    const doc = parse(new ArrayCursor(snippetWithContext));
+    const kinds = doc.children.map((n: any) => n.type);
+
+    // Assert
+    expect(kinds).toEqual(['DefinitionList']);
+    const defList: any = doc.children[0];
+    expect(defList.items.length).toBe(1);
+    const item = defList.items[0];
+    expect(item.termIndent).toBe(3);
+    expect(item.definitionIndent).toBeGreaterThan(item.termIndent);
+    expect(item.term).toBe('Token replay:');
+    expect(item.lines[0]).toBe('An attacker attempts to use a token that has already');
+    expect(item.lines[1]).toBe('been used with that resource server in the past.');
+  });
+
+  it('allows slash in term labels and consumes wrapped indented lines as definition', () => {
+    // Arrange: term contains a slash, followed by inline content and deeper-indented continuation
+    const snippetWithContext = [
+      '   Token manufacture/modification:  An attacker may generate a bogus',
+      '      token or modify the token contents (such as the authentication or',
+      '      attribute statements) of an existing token, causing the resource',
+      '      server to grant inappropriate access to the client.  For example,',
+      '      an attacker may modify the token to extend the validity period; a',
+      '      malicious client may modify the assertion to gain access to',
+      '      information that they should not be able to view.'
+    ];
+
+    // Act
+    const doc = parse(new ArrayCursor(snippetWithContext));
+    const kinds = doc.children.map((n: any) => n.type);
+
+    // Assert
+    expect(kinds).toEqual(['DefinitionList']);
+    const defList: any = doc.children[0];
+    expect(defList.items.length).toBe(1);
+    const item = defList.items[0];
+    expect(item.term).toBe('Token manufacture/modification:');
+    expect(item.termIndent).toBe(3);
+    expect(item.lines.length).toBeGreaterThan(3);
+    expect(item.lines[0]).toBe('An attacker may generate a bogus');
+  });
+
     it('parses nested definition items under a parent definition', () => {
         // Arrange: parent term with deeper child terms
         const snippetWithContext = [

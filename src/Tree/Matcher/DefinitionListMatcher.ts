@@ -57,10 +57,13 @@ function isTermLine(line: string, next: string | null, allowDeep = false): boole
             return false;
         }
     }
-    // Exclude obvious non-term technical lines (URLs, HTTP methods, paths, params)
-    // Do not exclude ':' to allow template-style terms
-    if (/[\/?&=]/.test(trimmed)) {
-        return false;
+    // Exclude obvious non-term technical lines (URLs or HTTP request start)
+    // Allow generic slashes in natural language terms (e.g., manufacture/modification)
+    if (/https?:\/\//i.test(trimmed)) {
+        return false; // URL-like content
+    }
+    if (/^\s*[A-Z][A-Z-]{2,}\s+\/.*/.test(trimmed)) {
+        return false; // likely an HTTP method + path
     }
     // Avoid list markers
     if (ListMatcher.test({
@@ -106,13 +109,25 @@ export const DefinitionListMatcher: BlockMatcher = {
 
             const termIndent = getIndentation(line);
             const definitionIndent = getIndentation(next);
-            const term = sliceLineText(line, termIndent);
+            // Support inline definition after a colon label on the same line.
+            const rawTerm = sliceLineText(line, termIndent);
+            let term = rawTerm;
             const item: DefinitionItemNode = {
                 term,
                 termIndent,
                 definitionIndent,
                 lines: [],
             };
+            // If the term ends with ':' followed by two or more spaces and content,
+            // treat the content as the first definition line and keep the label (with ':') as the term.
+            {
+                const inlineMatch = rawTerm.match(/^(.*?:)\s{2,}(\S.*)$/);
+                if (inlineMatch) {
+                    term = inlineMatch[1]!;
+                    item.term = term;
+                    item.lines.push(inlineMatch[2]!);
+                }
+            }
             // Consume term line
             context.advance();
 
@@ -161,12 +176,21 @@ export const DefinitionListMatcher: BlockMatcher = {
                     break; // not deeper than current item's definition
                 }
                 const childDefinitionIndent = getIndentation(childNext);
+                const childRawTerm = sliceLineText(childTerm, childTermIndent);
                 const child: DefinitionItemNode = {
-                    term: sliceLineText(childTerm, childTermIndent),
+                    term: childRawTerm,
                     termIndent: childTermIndent,
                     definitionIndent: childDefinitionIndent,
                     lines: [],
                 };
+                // Handle inline definition after a colon label for child items as well.
+                {
+                    const inlineMatch = childRawTerm.match(/^(.*?:)\s{2,}(\S.*)$/);
+                    if (inlineMatch) {
+                        child.term = inlineMatch[1]!;
+                        child.lines.push(inlineMatch[2]!);
+                    }
+                }
                 // consume child term line
                 context.advance();
                 while (!context.cursor.isEOL()) {
