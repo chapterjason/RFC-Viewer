@@ -245,9 +245,9 @@ export const ListMatcher: BlockMatcher = {
                     break;
                 }
                 if (isBlankLine(continuation)) {
-                    // Look ahead: if the next non-blank line is a new aligned list item,
-                    // or is less indented than our item's base/content, end the item.
-                    // Otherwise, treat this as a paragraph break within the item.
+                    // Look ahead: decide whether this blank line belongs to a new paragraph
+                    // within the current item, or should terminate the item so that a
+                    // separate BlankLine node is emitted by the BlankLineMatcher.
                     let k = 1;
                     let nextNonBlank: string | null = null;
                     while (true) {
@@ -257,21 +257,32 @@ export const ListMatcher: BlockMatcher = {
                         k += 1;
                     }
                     if (nextNonBlank === null) {
+                        // End of input after blank line — end the item here and let the
+                        // outer parser handle the trailing blanks.
                         break;
                     }
+                    // If the next non-blank starts a new list item (any style), end here.
                     const nm = detectListMarker(nextNonBlank);
-                    // If the next non-blank begins with any list marker, end this item/list here
-                    // so that a new list (possibly different style/indent) can start after the blank.
                     if (nm) {
                         break;
                     }
-                    // Accept a paragraph break if the next paragraph is at least as indented
-                    // as the item's base/content indentation.
-                    previousWasBlank = true;
-                    paragraphIndent = null;
-                    item.lines.push("");
-                    context.advance();
-                    continue;
+                    // If the next non-blank is sufficiently indented to be a continuation
+                    // paragraph of this list item, consume this blank as an intra-item
+                    // paragraph separator; otherwise, do not consume it so that a
+                    // BlankLine node can be produced between the list and the next block.
+                    const nextIndent = getIndentation(nextNonBlank);
+                    const baseForItem = listBaseIndent ?? item.contentIndent;
+                    const minIndentForContinuation = Math.min(baseForItem, item.contentIndent);
+                    if (nextIndent >= minIndentForContinuation) {
+                        previousWasBlank = true;
+                        paragraphIndent = null;
+                        item.lines.push("");
+                        context.advance();
+                        continue;
+                    }
+                    // Next block is not a continuation paragraph — end the item without
+                    // consuming the blank line.
+                    break;
                 }
                 if (PageFooterMatcher.test(context) || PageBreakMatcher.test(context) || PageHeaderMatcher.test(context)) {
                     break;
