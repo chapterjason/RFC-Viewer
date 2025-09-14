@@ -16,6 +16,7 @@ import type {HttpResponseNode} from "./HttpResponseNode.js";
 import type {HttpRequestNode} from "./HttpRequestNode.js";
 import type {AbnfNode} from "./AbnfNode.js";
 import type {TableNode} from "./TableNode.js";
+import type {PaketDiagramNode} from "./PaketDiagramNode.js";
 
 export type TreeNode =
     DocumentNode
@@ -35,4 +36,5 @@ export type TreeNode =
     | HttpResponseNode
     | HttpRequestNode
     | AbnfNode
-    | TableNode;
+    | TableNode
+    | PaketDiagramNode;

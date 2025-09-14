@@ -1,7 +1,8 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
- 
+
 import type {BlockMatcher} from "../BlockMatcher.js";
 import type {FigureNode} from "../Node/FigureNode.js";
+import {isFigureCaption} from "../../Utils/IsFigureCaption.js";
 
 function isDiagramLine(line: string): boolean {
     if (isBlankLine(line)) {
@@ -42,14 +43,6 @@ function isDiagramAnnotationLine(line: string): boolean {
         return false;
     }
     return true;
-}
-
-function isFigureCaption(line: string): boolean {
-    if (line === null) {
-        return false;
-    }
-    const trimmed = line.replace(/^\s+/, "");
-    return /^Figure\s+\d+\s*:/.test(trimmed);
 }
 
 function isNoteStart(line: string): boolean {
@@ -93,7 +86,7 @@ export const FigureMatcher: BlockMatcher = {
         return false;
     },
     parse: (context) => {
-        
+
         const lines: string[] = [];
 
         // 1) Read diagram block (consecutive non-blank diagram-like lines)

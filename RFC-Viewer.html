@@ -32,6 +32,7 @@
                 --TableOfContents: rgba(176, 146, 100, 0.22); /* muted amber */
                 --Figure: rgba(206, 120, 160, 0.22); /* muted rose */
                 --Table: rgba(153, 184, 120, 0.22); /* muted moss */
+                --PaketDiagram: rgba(153, 184, 120, 0.22); /* muted moss */
                 --HttpResponse: rgba(122, 162, 247, 0.18); /* soft blue tint */
                 --HttpRequest: rgba(122, 247, 162, 0.18); /* soft green tint */
                 --Abnf: rgba(247, 162, 122, 0.18); /* soft orange tint */
@@ -694,8 +695,13 @@
             .type-visible-Figure .output .line[data-type="Figure"] {
                 background: var(--Figure);
             }
+
             .type-visible-Table .output .line[data-type="Table"] {
                 background: var(--Table);
+            }
+
+            .type-visible-PaketDiagram .output .line[data-type="PaketDiagram"] {
+                background: var(--PaketDiagram);
             }
 
             .type-visible-HttpResponse .output .line[data-type="HttpResponse"] {
@@ -1188,7 +1194,7 @@
             let suppressEditorUpdate = false; // do not overwrite editor while applying edits
 
             const KNOWN_TYPES = [
-                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'DefinitionList', 'TableOfContents', 'Figure', 'Table', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
+                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'DefinitionList', 'TableOfContents', 'Figure', 'Table', 'PaketDiagram', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
             ];
             const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
             const MAX_LINE_LENGTH = 72; // validator threshold
@@ -2032,57 +2038,6 @@
 
                 // Depth-first render: for each child, render its lines and map lines back to the node
                 let nodeSerial = 0;
-
-                function summarize(node, lines) {
-                    try {
-                        switch (node.type) {
-                            case 'Document':
-                                return `Document: ${node.children?.length ?? 0} blocks`;
-                            case 'Title':
-                            case 'SectionTitle':
-                            case 'Paragraph':
-                                return (lines[0] ?? '').trim() || node.type;
-                            case 'IndentedBlock':
-                                return `IndentedBlock: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
-                            case 'List':
-                                return `List: ${node.items?.length ?? 0} item${(node.items?.length ?? 0) !== 1 ? 's' : ''}`;
-                            case 'DefinitionList':
-                                return `DefinitionList: ${node.items?.length ?? 0} term${(node.items?.length ?? 0) !== 1 ? 's' : ''}`;
-                            case 'TableOfContents':
-                                return `TableOfContents: ${lines.length} entr${lines.length === 1 ? 'y' : 'ies'}`;
-                            case 'Figure': {
-                                // Try to extract a caption if present on the last non-blank line
-                                let caption = '';
-                                for (let i = lines.length - 1; i >= 0; i -= 1) {
-                                    const t = (lines[i] || '').trim();
-                                    if (!t) {
-                                        continue;
-                                    }
-                                    const m = t.match(/^Figure\s+(\d+)\s*:\s*(.*)$/);
-                                    if (m) {
-                                        caption = `Figure ${m[1]}: ${m[2]}`.trim();
-                                    }
-                                    break;
-                                }
-                                return caption || `Figure: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
-                            }
-                            case 'Table':
-                                return `Table: ${lines.length} line${lines.length !== 1 ? 's' : ''}`;
-                            case 'PageHeader':
-                                return `Header: ${(node.text ?? '').slice(0, 56)}`;
-                            case 'PageFooter':
-                                return `Footer: ${(node.text ?? '').slice(0, 56)}`;
-                            case 'PageBreak':
-                                return 'PageBreak';
-                            case 'BlankLine':
-                                return 'Blank line';
-                            default:
-                                return node.type;
-                        }
-                    } catch (_) {
-                        return node.type || 'Unknown';
-                    }
-                }
 
                 function renderNodeWithMap(node) {
                     const lines = renderNode(node);

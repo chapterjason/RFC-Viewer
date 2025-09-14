@@ -23,6 +23,7 @@ import type {BlockContext} from "./BlockContext.js";
 import type {BlockMatcher} from "./BlockMatcher.js";
 import type {ParserOptions} from "./ParserOptions.js";
 import type {ParserState} from "./ParserState.js";
+import {PaketDiagramMatcher} from "./Matcher/PaketDiagramMatcher.js";
 
 function createContext(cursor: ArrayCursor<string>, state: ParserState): BlockContext {
     return {
@@ -45,6 +46,7 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         BlankLineMatcher,
         FigureMatcher,
         TableMatcher,
+        PaketDiagramMatcher,
         TitleMatcher,
         SectionTitleMatcher,
         TableOfContentsMatcher,

@@ -36,6 +36,8 @@ import {renderTable} from "./RenderTable.js";
 import type {TableNode} from "../Node/TableNode.js";
 
 import {renderDocument} from "./RenderDocument.js";
+import {renderPaketDiagram} from "./RenderPaketDiagram.js";
+import type {PaketDiagramNode} from "../Node/PaketDiagramNode.js";
 
 export function renderNode(node: TreeNode): string[] {
     switch (node.type) {
@@ -73,6 +75,8 @@ export function renderNode(node: TreeNode): string[] {
             return renderAbnf(node as AbnfNode);
         case "Table":
             return renderTable(node as TableNode);
+        case "PaketDiagram":
+            return renderPaketDiagram(node as PaketDiagramNode);
         case "Document":
             return renderDocument(node as DocumentNode);
         default:
