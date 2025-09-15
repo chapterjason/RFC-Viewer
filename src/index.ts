@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
+import {existsSync} from "node:fs";
 import {parse} from "./Tree/Parser.js";
 import {ArrayCursor} from "./Utils/ArrayCursor.js";
 import * as path from "node:path";
 import {renderDocument} from "./Tree/Render/RenderDocument.js";
 import {patch} from "./Tree/Patch/Patch.js";
-import {existsSync} from "node:fs";
+import {downloadFile} from "./Utils/DownloadFile.js";
 
 const currentWorkingDirectory = process.cwd();
 
@@ -36,7 +37,9 @@ const numbers = [
 ];
 
 async function main() {
+
     for (const number of numbers) {
+        const rfcUrl = `https://www.rfc-editor.org/rfc/rfc${number}.txt`;
         const rfcPatchesDirectory = path.join(patchesDirectory, `${number}`);
         const rfcFile = path.join(rfcDirectory, `rfc${number}.txt`);
         const originalOutputFile = path.join(outputDirectory, `rfc${number}.original.txt`);
@@ -45,7 +48,7 @@ async function main() {
         const originalAstFile = path.join(outputDirectory, `rfc${number}.original.json`);
         const modifiedAstFile = path.join(outputDirectory, `rfc${number}.json`);
 
-        const content = fs.readFileSync(rfcFile, 'utf-8');
+        const content = await downloadFile(rfcUrl, rfcFile);
         const lines = content.replace(/\r?\n/g, '\n').split('\n');
         const cursor = new ArrayCursor(lines);
         const ast = parse(cursor);
