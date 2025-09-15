@@ -22,9 +22,9 @@
 - Entry points: `RenderDocument.ts` (flatten children), `RenderNode.ts` (dispatch by type), `RenderToString.ts` (join with `\\n`).
 - Principles: preserve blank-line counts, do not emit spaces on blank lines, use explicit spaces for indentation.
 
-### RFC-Viewer
-- Location: `RFC-Viewer.html` — static, zero-build inspector that visualizes parsed ASTs and highlights node types.
-- When adding or renaming node types or renderers, also update `RFC-Viewer.html`:
+### RFC-Inspector
+- Location: `index.html` — static, zero-build inspector that visualizes parsed ASTs and highlights node types.
+- When adding or renaming node types or renderers, also update `index.html`:
   - Add a CSS color variable for the new type (e.g., `--HttpResponse`).
   - Add a `.type-visible-<Type>` rule to tint lines for that type.
   - Add the type string to the `KNOWN_TYPES` array for legend toggles.

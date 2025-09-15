@@ -36,7 +36,7 @@ jobs:
               run: |
                   rm -rf _site
                   mkdir -p _site
-                  cp RFC-Viewer.html _site/index.html
+                  cp index.html _site/index.html
                   cp -r dist _site/dist
 
             # Upload bundle for the deploy job
