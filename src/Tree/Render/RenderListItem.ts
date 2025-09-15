@@ -1,4 +1,4 @@
-import type {ListItemNode} from "../Node/ListNode.js";
+import type {ListItemNode} from "../Node/ListItemNode.js";
 
 export function renderListItem(item: ListItemNode): string[] {
     const marker = item.marker;

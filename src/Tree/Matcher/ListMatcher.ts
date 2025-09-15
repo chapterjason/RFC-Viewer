@@ -1,11 +1,12 @@
 import {isBlankLine} from "../../Utils/IsBlankLine.js";
 import type {BlockMatcher} from "../BlockMatcher.js";
-import type {ListItemNode, ListNode} from "../Node/ListNode.js";
+import type {ListNode} from "../Node/ListNode.js";
 import {PageBreakMatcher} from "./PageBreakMatcher.js";
 import {PageFooterMatcher} from "./PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./PageHeaderMatcher.js";
 import {getIndentation} from "../../Utils/GetIndentation.js";
 import {sliceLineText} from "../../Utils/SliceLineText.js";
+import type {ListItemNode} from "../Node/ListItemNode.js";
 
 interface ListMatch {
     marker: string;

@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {renderListItem} from '../src/Tree/Render/RenderListItem.js';
-import type {ListItemNode} from '../src/Tree/Node/ListNode.js';
+
+import {ListItemNode} from "../src/Tree/Node/ListItemNode";
 
 describe('RenderListItem', () => {
     it('normalizes bullet layout with content at contentIndent', () => {

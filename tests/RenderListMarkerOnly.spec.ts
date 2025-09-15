@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {renderList} from '../src/Tree/Render/RenderList.js';
-import type {ListItemNode, ListNode} from '../src/Tree/Node/ListNode.js';
+import type {ListNode} from '../src/Tree/Node/ListNode.js';
+import {ListItemNode} from "../src/Tree/Node/ListItemNode";
 
 describe('RenderList marker-only item', () => {
   it('renders marker on its own line, with content starting on the following line', () => {
