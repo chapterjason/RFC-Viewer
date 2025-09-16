@@ -13,7 +13,6 @@ import {PageFooterMatcher} from "./Matcher/PageFooterMatcher.js";
 import {PageHeaderMatcher} from "./Matcher/PageHeaderMatcher.js";
 import {ListMatcher} from "./Matcher/ListMatcher.js";
 import {TableOfContentsMatcher} from "./Matcher/TableOfContentsMatcher.js";
-import {DefinitionListMatcher} from "./Matcher/DefinitionListMatcher.js";
 import {FigureMatcher} from "./Matcher/FigureMatcher.js";
 import {HttpResponseMatcher} from "./Matcher/HttpResponseMatcher.js";
 import {HttpRequestMatcher} from "./Matcher/HttpRequestMatcher.js";
@@ -51,7 +50,6 @@ export function parse(cursor: ArrayCursor<string>, options: ParserOptions = {}):
         SectionTitleMatcher,
         TableOfContentsMatcher,
         ListMatcher,
-        DefinitionListMatcher,
         HttpRequestMatcher,
         HttpResponseMatcher,
         AbnfMatcher,

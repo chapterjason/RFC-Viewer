@@ -28,7 +28,7 @@
                 --PageFooter: rgba(114, 124, 202, 0.08);
                 --PageHeader: rgba(114, 124, 202, 0.08);
                 --List: rgba(88, 176, 168, 0.22); /* muted teal */
-                --DefinitionList: rgba(142, 180, 102, 0.22); /* olive */
+                --ListItem: rgba(142, 180, 102, 0.22); /* olive */
                 --TableOfContents: rgba(176, 146, 100, 0.22); /* muted amber */
                 --Figure: rgba(206, 120, 160, 0.22); /* muted rose */
                 --Table: rgba(153, 184, 120, 0.22); /* muted moss */
@@ -684,8 +684,8 @@
                 background: var(--List);
             }
 
-            .type-visible-DefinitionList .output .line[data-type="DefinitionList"] {
-                background: var(--DefinitionList);
+            .type-visible-ListItem .output .line[data-type="ListItem"] {
+                background: var(--ListItem);
             }
 
             .type-visible-TableOfContents .output .line[data-type="TableOfContents"] {
@@ -1194,7 +1194,7 @@
             let suppressEditorUpdate = false; // do not overwrite editor while applying edits
 
             const KNOWN_TYPES = [
-                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'DefinitionList', 'TableOfContents', 'Figure', 'Table', 'PaketDiagram', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
+                'Document', 'Title', 'SectionTitle', 'Metadata', 'Paragraph', 'IndentedBlock', 'List', 'ListItem', 'TableOfContents', 'Figure', 'Table', 'PaketDiagram', 'HttpResponse', 'HttpRequest', 'Abnf', 'BlankLine', 'PageHeader', 'PageFooter', 'PageBreak'
             ];
             const MAX_INPUT_PREVIEW_BYTES = 1_000_000;
             const MAX_LINE_LENGTH = 72; // validator threshold

@@ -1,188 +1,61 @@
 
 # `ListItemNode`
 
-A `ListItemNode` consist of a marker and content.
+A `ListItemNode` represents a single item within a [`ListNode`](./ListNode.md).  Each item preserves the marker text that introduced the entry and exposes structured children describing the content.
 
-Usually the marker and the content is separated by two spaces.
-In some cases, as their might wasn't enough space cause of the 72 char limit, the space was reduced to one space.
+## Shape
 
-## Marker
-
-The marker CAN consist of multiple lines like from the [RFC9562] on line 1253:
-
-```txt
-   Replace Leftmost Random Bits with Increased Clock Precision
-   (Method 3):
-      For UUIDv7, which has millisecond timestamp precision, it is
-      possible to use additional clock precision available on the system
-      [...]
+```ts
+interface ListItemNode {
+  type: 'ListItem';
+  marker: string;
+  markerIndent: number;
+  contentIndent: number;
+  children: Array<ParagraphNode | ListNode | BlankLineNode | PageHeaderNode | PageFooterNode | PageBreakNode>;
+  markerOnly?: boolean;
+  inline?: boolean;
+}
 ```
 
-For sure this can only work if the marker contains text like the [Parenthesized List Item](#parenthesized-list-item), [Bracketed List Item](#bracketed-list-item) or the  [Colon List Item](#colon-list-item).
+The marker can be any RFC-style bullet or definition term.  It always keeps the original spacing and can span multiple lines (for example, definition terms that wrap).  The `markerIndent` property stores the number of leading spaces before the marker, while `contentIndent` records the column where content begins.
 
-The marker MUST be one of the following types:
+`children` is the structured representation of the item body.  Narrative paragraphs become `ParagraphNode`s, nested lists are emitted as `ListNode`s, blank separators remain `BlankLineNode`s, and pagination controls (`PageHeader`, `PageFooter`, `PageBreak`) are preserved exactly where they occurred.
 
-### Types
+The optional `markerOnly` flag is set when the original marker line contained no content and the item has no children.  When content appeared on the same line as the marker the parser sets `inline` to `true` so renderers can keep the in-line layout intact.
 
-#### Dashed List Item
+## Examples
 
-Example:
-
-```txt
-   -  Item 1
-   -  Item 2 with
-      a multiline text
-   -  Item 3
-```
-
-#### Starred List Item
-
-Example:
+### Bullet Items
 
 ```txt
-   *  Item 1
-   *  Item 2 with
-      a multiline text
-   *  Item 3
+   o  Response type name: token
+   o  Change controller: IETF
 ```
 
-#### Bullet List Item
+Each item stores `marker = 'o'`, `markerIndent = 3`, `contentIndent = 6`, and a single `ParagraphNode` child containing the description.
 
-Example:
-
-```txt
-   o  Item 1
-   o  Item 2 with
-      a multiline text
-   o  Item 3
-```
-
-#### Numbered List Item
-
-Example:
-
-```txt
-   1.  Item 1
-   2.  Item 2 with
-       a multiline text
-   3.  Item 3
-```
-
-#### Parenthesized List Item
-
-Example:
-
-```txt
-   (a)  Item 1
-   (b)  Item 2 with
-        a multiline text
-   (c)  Item 3
-```
-
-#### Bracketed List Item
-
-Example:
-
-```txt
-   [1234]  Item 1
-   [2345]  Item 2 with
-           a multiline text
-   [3456]  Item 3
-
-   [RFC4321]  Item 4 referencing
-              an RFC
-   [RFC1234]
-              Text is also possible on the next line
-```
-
-#### Abbreviated List Item
-
-Example:
-
-```txt
-   ABNF  Augmented Backus-Naur Form
-   DBMS  Database Management System
-   MD5   Message Digest 5
-```
-
-#### Colon List Item
-
-Example:
-
-```txt
-   Term 1:  Definition 1
-   Term 2:  Definition 2 with
-            a multiline text
-   Term 3:  Definition 3
-```
-
-#### Definition List Item
-
-Example:
+### Definition Terms
 
 ```txt
    resource owner
       An entity capable of granting access to a protected resource.
-      When the resource owner is a person, it is referred to as an
-      end-user.
-   resource server
-      The server hosting the protected resources, capable of accepting
-      and responding to protected resource requests using access tokens.
 ```
 
-## Content
+The marker captures `"resource owner"`, `markerIndent = 3`, and `contentIndent = 6`.  The definition body becomes one or more `ParagraphNode`s; additional blank lines or nested lists would appear in `children` preserving their original order.
 
-The content CAN be on the same line as the marker or on the next line.
-
-```txt
-   Some marker
-      some content here
-   Another marker  some content here and
-                   and some content here
-```
-
-The content CAN also contain multiple lines, paragraphs, blank lines and more deeper lists.
-
-```txt
-   Some marker:
-      some content here and here
-      
-      Here also content which is part of 
-      the some marker
-      
-      And a deeper list
-      
-      * deep list item 1
-      
-      * deep list item 2
-   Another marker here:
-      some content here and here
-```
-
-The content CAN span ober multiple pages:
+### Multi-page Items
 
 ```txt
    code
          REQUIRED.  The authorization code generated by the
-         authorization server.  The authorization code MUST expire
-         shortly after it is issued to mitigate the risk of leaks.  A
-         maximum authorization code lifetime of 10 minutes is
-         RECOMMENDED.  The client MUST NOT use the authorization code
+         authorization server.
 
+Hardt                        Standards Track                   [Page 26]
+
+RFC 6749                        OAuth 2.0                   October 2012
 
-<n number of new lines here>
-
-
-Hardt                        Standards Track                   [Page 26] <page footer>
-                                                                       <page break>
-RFC 6749                        OAuth 2.0                   October 2012 <page header>
-
-
-         more than once.  If an authorization code is used more than     <same indent as before!>
-         once, the authorization server MUST deny the request and SHOULD
-         revoke (when possible) all tokens previously issued based on
-         that authorization code.  The authorization code is bound to
-         the client identifier and redirection URI.
+         more than once.
 ```
 
+The parser emits `PageFooter`, `PageBreak`, and `PageHeader` nodes inside `children` so a renderer can reproduce the exact pagination boundaries when round-tripping the document.
 

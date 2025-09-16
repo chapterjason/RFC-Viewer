@@ -10,7 +10,6 @@ import type {PageFooterNode} from "./PageFooterNode.js";
 import type {PageHeaderNode} from "./PageHeaderNode.js";
 import type {ListNode} from "./ListNode.js";
 import type {TableOfContentsNode} from "./TableOfContentsNode.js";
-import type {DefinitionListNode} from "./DefinitionListNode.js";
 import type {FigureNode} from "./FigureNode.js";
 import type {HttpResponseNode} from "./HttpResponseNode.js";
 import type {HttpRequestNode} from "./HttpRequestNode.js";
@@ -31,7 +30,6 @@ export type TreeNode =
     | PageHeaderNode
     | ListNode
     | TableOfContentsNode
-    | DefinitionListNode
     | FigureNode
     | HttpResponseNode
     | HttpRequestNode

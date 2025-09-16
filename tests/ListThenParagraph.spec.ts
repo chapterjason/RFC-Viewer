@@ -1,6 +1,16 @@
 import {describe, expect, it} from 'vitest';
 import {ArrayCursor} from '../src/Utils/ArrayCursor.js';
 import {parse} from '../src/Tree/Parser.js';
+import {renderList} from '../src/Tree/Render/RenderList.js';
+import type {ListItemNode} from '../src/Tree/Node/ListItemNode.js';
+import type {ParagraphNode} from '../src/Tree/Node/ParagraphNode.js';
+
+function joinParagraphs(item: ListItemNode): string {
+    return item.children
+        .filter((child): child is ParagraphNode => child.type === 'Paragraph')
+        .map((paragraph) => paragraph.lines.join('\n'))
+        .join('\n');
+}
 
 describe('List followed by narrative paragraph', () => {
     it('does not include a 3-space paragraph after a blank line in the last list item', () => {
@@ -31,9 +41,10 @@ describe('List followed by narrative paragraph', () => {
 
         // Assert: the last list item should not contain the narrative paragraph
         const list: any = doc.children[0];
-        expect(list.items.length).toBe(3);
-        const lastItem = list.items[2];
-        const lastItemText = lastItem.lines.join('\n');
+        const listItems = list.items.filter((entry: any) => entry.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(3);
+        const lastItem = listItems[2];
+        const lastItemText = joinParagraphs(lastItem);
         expect(lastItemText).not.toContain('In any case, the PKCE challenge');
 
         // Assert: the paragraph node has indent 3 and trimmed lines
@@ -41,5 +52,8 @@ describe('List followed by narrative paragraph', () => {
         expect(para.type).toBe('Paragraph');
         expect(para.indent).toBe(3);
         expect(para.lines[0].startsWith('In any case')).toBe(true);
+
+        // Round trip list rendering matches the leading list lines
+        expect(renderList(list)).toEqual(lines.slice(0, 10));
     });
 });

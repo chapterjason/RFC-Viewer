@@ -22,8 +22,6 @@ import type {ListNode} from "../Node/ListNode.js";
 import type {DocumentNode} from "../Node/DocumentNode.js";
 import {renderTableOfContents} from "./RenderTableOfContents.js";
 import type {TableOfContentsNode} from "../Node/TableOfContentsNode.js";
-import {renderDefinitionList} from "./RenderDefinitionList.js";
-import type {DefinitionListNode} from "../Node/DefinitionListNode.js";
 import {renderFigure} from "./RenderFigure.js";
 import type {FigureNode} from "../Node/FigureNode.js";
 import {renderHttpResponse} from "./RenderHttpResponse.js";
@@ -63,8 +61,6 @@ export function renderNode(node: TreeNode): string[] {
             return renderList(node as ListNode);
         case "TableOfContents":
             return renderTableOfContents(node as TableOfContentsNode);
-        case "DefinitionList":
-            return renderDefinitionList(node as DefinitionListNode);
         case "Figure":
             return renderFigure(node as FigureNode);
         case "HttpResponse":

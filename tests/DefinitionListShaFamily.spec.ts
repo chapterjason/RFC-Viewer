@@ -1,9 +1,22 @@
 import {describe, expect, it} from 'vitest';
 import {ArrayCursor} from '../src/Utils/ArrayCursor.js';
 import {parse} from '../src/Tree/Parser.js';
-import {DefinitionListNode} from "../src/Tree/Node/DefinitionListNode";
+import type {ListNode} from '../src/Tree/Node/ListNode.js';
+import type {ListItemNode} from '../src/Tree/Node/ListItemNode.js';
+import type {ParagraphNode} from '../src/Tree/Node/ParagraphNode.js';
 
-describe('DefinitionListMatcher - SHA family mixed inline and wrapped', () => {
+function listItems(node: ListNode): ListItemNode[] {
+    return node.items.filter((entry): entry is ListItemNode => entry.type === 'ListItem');
+}
+
+function paragraphText(item: ListItemNode): string {
+    return item.children
+        .filter((child): child is ParagraphNode => child.type === 'Paragraph')
+        .map((paragraph) => paragraph.lines.join(' '))
+        .join(' ');
+}
+
+describe('ListMatcher - SHA family mixed inline and wrapped terms', () => {
     it('parses inline and wrapped definition items without falling back to Paragraph', () => {
         // Arrange: SHA entries mixing inline single-line items and wrapped descriptions
         const lines = [
@@ -28,42 +41,36 @@ describe('DefinitionListMatcher - SHA family mixed inline and wrapped', () => {
 
         // Act
         const document = parse(new ArrayCursor(lines));
-        const kinds = document.children.map((n: any) => n.type);
+        const kinds = document.children.map((node: any) => node.type);
 
-        // Assert: alternating DefinitionList and BlankLine, no Paragraph nodes
-        expect(kinds).toEqual([
-            'DefinitionList', 'BlankLine',
-            'DefinitionList', 'BlankLine',
-            'DefinitionList', 'BlankLine',
-            'DefinitionList', 'BlankLine',
-            'DefinitionList', 'BlankLine',
-            'DefinitionList', 'BlankLine',
-            'DefinitionList',
+        // Assert: single List node with interleaved blank lines preserved
+        expect(kinds).toEqual(['List']);
+
+        const list = document.children[0] as ListNode;
+        const itemTypes = list.items.map((entry: any) => entry.type);
+        expect(itemTypes).toEqual([
+            'ListItem', 'BlankLine',
+            'ListItem', 'BlankLine',
+            'ListItem', 'BlankLine',
+            'ListItem', 'BlankLine',
+            'ListItem', 'BlankLine',
+            'ListItem', 'BlankLine',
+            'ListItem',
         ]);
-        // Inline single-line items detected (term + two spaces + text)
-        const first: DefinitionListNode = document.children[0];
-        expect(first.items[0].termLines).toEqual(['SHA']);
-        expect(first.items[0].inline).toBe(true);
-        expect(first.items[0].lines[0]).toBe('Secure Hash Algorithm');
 
-        const third: DefinitionListNode = document.children[4];
-        expect(third.items[0].termLines).toEqual(['SHA-3']);
-        expect(third.items[0].inline).toBe(true);
-        expect(third.items[0].lines[0]).toContain('Secure Hash Algorithm 3');
+        const entries = listItems(list);
+        expect(entries[0].inline).toBe(true);
+        expect(paragraphText(entries[0])).toContain('Secure Hash Algorithm');
 
-        const last: DefinitionListNode = document.children[12];
-        expect(last.items[0].termLines).toEqual(['SHAKE']);
-        expect(last.items[0].inline).toBe(true);
-        expect(last.items[0].lines[0]).toContain('KECCAK');
+        expect(entries[2].inline).toBe(true);
+        expect(paragraphText(entries[2])).toContain('Secure Hash Algorithm 3');
 
-        // Wrapped two-line items preserve continuation under computed definitionIndent
-        const second: DefinitionListNode = document.children[2];
-        expect(second.items[0].termLines[0].startsWith('SHA-1')).toBe(true);
-        expect(second.items[0].lines).toContain('bits)');
+        expect(entries[6].inline).toBe(true);
+        expect(paragraphText(entries[6])).toContain('KECCAK');
 
-        const fourth: DefinitionListNode = document.children[6];
-        expect(fourth.items[0].termLines[0].startsWith('SHA-224')).toBe(true);
-        expect(fourth.items[0].lines).toContain('bits');
+        expect(paragraphText(entries[1])).toContain('bits)');
+        expect(paragraphText(entries[3])).toContain('bits');
+        expect(paragraphText(entries[4])).toContain('bits');
+        expect(paragraphText(entries[5])).toContain('bits');
     });
 });
-

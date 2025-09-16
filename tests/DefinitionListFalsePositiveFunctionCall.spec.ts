@@ -2,8 +2,8 @@ import {describe, expect, it} from 'vitest';
 import {ArrayCursor} from '../src/Utils/ArrayCursor.js';
 import {parse} from '../src/Tree/Parser.js';
 
-describe('DefinitionListMatcher - avoid false positive on function call', () => {
-    it('does not treat window.opener.postMessage call as a DefinitionList', () => {
+describe('ListMatcher definition heuristics - avoid false positives', () => {
+    it('does not treat window.opener.postMessage call as a definition list', () => {
         // Arrange: RFC-like paragraph with a multi-line function call
         const snippetWithContext = [
             '',
@@ -21,7 +21,7 @@ describe('DefinitionListMatcher - avoid false positive on function call', () => 
         const document = parse(new ArrayCursor(snippetWithContext));
         const kinds = document.children.map((n: any) => n.type);
 
-        // Assert: no DefinitionList; parsed as BlankLine, Paragraph, IndentedBlock, Paragraph, BlankLine
+        // Assert: parsed as BlankLine, Paragraph, IndentedBlock, Paragraph, BlankLine without creating a list
         expect(kinds).toEqual(['BlankLine', 'Paragraph', 'IndentedBlock', 'Paragraph', 'BlankLine']);
 
         // Additional sanity checks on node contents

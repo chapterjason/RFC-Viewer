@@ -1,6 +1,9 @@
 import {describe, expect, it} from 'vitest';
 import {ArrayCursor} from '../src/Utils/ArrayCursor.js';
 import {parse} from '../src/Tree/Parser.js';
+import {renderList} from '../src/Tree/Render/RenderList.js';
+import type {ListItemNode} from '../src/Tree/Node/ListItemNode.js';
+import type {ParagraphNode} from '../src/Tree/Node/ParagraphNode.js';
 
 describe('List items with multiple paragraphs', () => {
     it('keeps indented paragraph after a blank line inside the same item', () => {
@@ -26,15 +29,17 @@ describe('List items with multiple paragraphs', () => {
 
         // Assert
         expect(list.type).toBe('List');
-        expect(list.items.length).toBe(1);
-        const item = list.items[0];
-        // We expect an empty string separating paragraphs inside the item
-        expect(item.lines.some((l: string) => l === '')).toBe(true);
-        // Ensure the second paragraph lines are included after the blank separator
-        const joined = item.lines.join('\n');
-        expect(joined).toContain('In particular, web attackers may operate OAuth clients');
+        const item = list.items.find((entry: any) => entry.type === 'ListItem') as ListItemNode;
+        expect(item).toBeDefined();
+        const blankLines = item.children.filter((child) => child.type === 'BlankLine');
+        expect(blankLines).toHaveLength(1);
+        const paragraphs = item.children.filter((child): child is ParagraphNode => child.type === 'Paragraph');
+        expect(paragraphs).toHaveLength(2);
+        expect(paragraphs[1].lines.join(' ')).toContain('web attackers may operate OAuth clients');
         // No separate IndentedBlock node should appear
         expect(doc.children.length).toBe(1);
+
+        // Round trip renders the same lines
+        expect(renderList(list)).toEqual(lines);
     });
 });
-

@@ -3,6 +3,10 @@ import type {BlockContext} from '../src/Tree/BlockContext.js';
 import {ArrayCursor} from '../src/Utils/ArrayCursor.js';
 import {ListMatcher} from '../src/Tree/Matcher/ListMatcher.js';
 import {parse} from '../src/Tree/Parser.js';
+import {renderList} from '../src/Tree/Render/RenderList.js';
+import type {ListNode} from '../src/Tree/Node/ListNode.js';
+import type {ListItemNode} from '../src/Tree/Node/ListItemNode.js';
+import type {ParagraphNode} from '../src/Tree/Node/ParagraphNode.js';
 
 function createTestContext(lines: string[]): BlockContext {
     const cursor = new ArrayCursor(lines);
@@ -12,6 +16,17 @@ function createTestContext(lines: string[]): BlockContext {
         advance: () => cursor.next(),
         state: {seenMetadata: false, seenTitle: false},
     };
+}
+
+function collectParagraphLines(item: ListItemNode): string[] {
+    return item.children
+        .filter((child): child is ParagraphNode => child.type === 'Paragraph')
+        .flatMap((paragraph) => paragraph.lines);
+}
+
+function firstParagraphLine(item: ListItemNode): string | undefined {
+    const lines = collectParagraphLines(item);
+    return lines[0];
 }
 
 describe('ListMatcher', () => {
@@ -31,11 +46,15 @@ describe('ListMatcher', () => {
         // Assert
         expect(canMatch).toBe(true);
         expect(node.type).toBe('List');
-        expect(node.items.length).toBe(3);
-        expect(node.items[0].marker).toBe('o');
-        expect(node.items[0].lines[0]).toBe('Response type name: token');
-        expect(node.items[1].lines[0]).toBe('Change controller: IETF');
-        expect(node.items[2].lines[0]).toContain('RFC 6749');
+        const listItems = node.items.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(3);
+        expect(listItems[0].marker).toBe('o');
+        expect(listItems[0].markerIndent).toBe(3);
+        expect(listItems[0].contentIndent).toBe(6);
+        expect(firstParagraphLine(listItems[0])).toBe('Response type name: token');
+        expect(firstParagraphLine(listItems[1])).toBe('Change controller: IETF');
+        expect(firstParagraphLine(listItems[2])).toContain('RFC 6749');
+        expect(renderList(node)).toEqual(lines);
     });
 
     it('parses star bullets with wrapped continuation lines', () => {
@@ -52,11 +71,14 @@ describe('ListMatcher', () => {
 
         // Assert
         expect(node.type).toBe('List');
-        expect(node.items.length).toBe(2);
-        expect(node.items[0].marker).toBe('*');
-        expect(node.items[0].lines.length).toBe(2);
-        expect(node.items[0].lines[0]).toMatch(/^First point starts here/);
-        expect(node.items[0].lines[1]).toMatch(/^continues on the next line\./);
+        const listItems = node.items.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(2);
+        expect(listItems[0].marker).toBe('*');
+        const firstParagraph = collectParagraphLines(listItems[0]);
+        expect(firstParagraph).toHaveLength(2);
+        expect(firstParagraph[0]).toMatch(/^First point starts here/);
+        expect(firstParagraph[1]).toMatch(/^continues on the next line\./);
+        expect(renderList(node)).toEqual(lines);
     });
 
     it('parses numbered and alpha-paren bullets', () => {
@@ -75,12 +97,17 @@ describe('ListMatcher', () => {
         const doc = parse(new ArrayCursor(snippetWithContext));
         const kinds = doc.children.map((n: any) => n.type);
 
-        // Assert: two lists separated by blanks
-        expect(kinds).toEqual(['BlankLine', 'List', 'BlankLine', 'List', 'BlankLine']);
+        // Assert: single list with nested alphabetical list under second item
+        expect(kinds).toEqual(['BlankLine', 'List', 'BlankLine']);
         const firstList: any = doc.children[1];
-        expect(firstList.items.map((i: any) => i.marker)).toEqual(['1.', '2.']);
-        const secondList: any = doc.children[3];
-        expect(secondList.items.map((i: any) => i.marker)).toEqual(['(A)', '(B)']);
+        const listItems = firstList.items.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(2);
+        expect(listItems[0].marker).toBe('1.');
+        expect(listItems[1].marker).toBe('2.');
+        const nested = listItems[1].children.find((child) => child.type === 'List') as ListNode | undefined;
+        expect(nested).toBeDefined();
+        const nestedMarkers = nested!.items.filter((it: any) => it.type === 'ListItem').map((it: ListItemNode) => it.marker);
+        expect(nestedMarkers).toEqual(['(A)', '(B)']);
     });
 
     it('parses bracketed bullets like [TEXT]', () => {
@@ -96,9 +123,11 @@ describe('ListMatcher', () => {
 
         // Assert
         expect(node.type).toBe('List');
-        expect(node.items.length).toBe(2);
-        expect(node.items[0].marker).toBe('[TOKEN]');
-        expect(node.items[1].marker).toBe('[AUTHZ]');
+        const listItems = node.items.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(2);
+        expect(listItems[0].marker).toBe('[TOKEN]');
+        expect(listItems[1].marker).toBe('[AUTHZ]');
+        expect(renderList(node)).toEqual(lines);
     });
 
     it('parses bracketed reference keys with punctuation and digits', () => {
@@ -114,10 +143,13 @@ describe('ListMatcher', () => {
 
         // Assert
         expect(node.type).toBe('List');
-        expect(node.items.length).toBe(1);
-        expect(node.items[0].marker).toBe('[W3C.REC-html401-19991224]');
-        expect(node.items[0].lines[0]).toMatch(/^HTML 4\.01 Specification/);
-        expect(node.items[0].lines[1]).toMatch(/^December 1999\./);
+        const listItems = node.items.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(listItems).toHaveLength(1);
+        expect(listItems[0].marker).toBe('[W3C.REC-html401-19991224]');
+        const paragraphLines = collectParagraphLines(listItems[0]);
+        expect(paragraphLines[0]).toMatch(/^HTML 4\.01 Specification/);
+        expect(paragraphLines[1]).toMatch(/^December 1999\./);
+        expect(renderList(node)).toEqual(lines);
     });
 
     it('parses bracketed reference key on its own line with content on next line', () => {
@@ -137,9 +169,11 @@ describe('ListMatcher', () => {
         expect(kinds).toEqual(['List', 'BlankLine']);
         const list: any = doc.children[0];
         expect(list.items.length).toBe(1);
-        expect(list.items[0].marker).toBe('[W3C.REC-html401-19991224]');
-        expect(list.items[0].lines[0]).toMatch(/^Raggett, D\./);
-        expect(list.items[0].lines.length).toBe(2);
+        const onlyItem = list.items.find((it: any) => it.type === 'ListItem') as ListItemNode;
+        expect(onlyItem.marker).toBe('[W3C.REC-html401-19991224]');
+        const paragraphLines = collectParagraphLines(onlyItem);
+        expect(paragraphLines[0]).toMatch(/^Raggett, D\./);
+        expect(paragraphLines).toHaveLength(2);
     });
 
     it('does not misclassify ToC lines as lists', () => {
@@ -180,15 +214,17 @@ describe('ListMatcher', () => {
         const doc = parse(new ArrayCursor(lines));
         const listNodes = doc.children.filter((n: any) => n.type === 'List');
 
-        // Assert: two separate lists, each with one item
-        expect(listNodes.length).toBe(2);
+        // Assert: single list containing both entries separated by a BlankLine
+        expect(listNodes.length).toBe(1);
         const firstList: any = listNodes[0];
-        expect(firstList.items.length).toBe(1);
-        expect(firstList.items[0].marker).toBe('[RFC6125]');
-        const joined = firstList.items[0].lines.join('\n');
-        expect(joined).toMatch(/\(PKIX\)\s+Certificates/);
-        const secondList: any = listNodes[1];
-        expect(secondList.items.length).toBe(1);
-        expect(secondList.items[0].marker).toBe('[USASCII]');
+        const entries = firstList.items;
+        expect(entries.map((entry: any) => entry.type)).toEqual(['ListItem', 'BlankLine', 'ListItem']);
+        const firstListItems = entries.filter((it: any) => it.type === 'ListItem') as ListItemNode[];
+        expect(firstListItems[0].marker).toBe('[RFC6125]');
+        const nestedList = firstListItems[0].children.find((child) => child.type === 'List') as ListNode | undefined;
+        expect(nestedList).toBeDefined();
+        const nestedMarkers = nestedList!.items.filter((it: any) => it.type === 'ListItem').map((it: ListItemNode) => it.marker);
+        expect(nestedMarkers).toEqual(['(PKIX)']);
+        expect(firstListItems[1].marker).toBe('[USASCII]');
     });
 });
